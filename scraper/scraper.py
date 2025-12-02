@@ -4,11 +4,13 @@ from data_parser import Parser
 from bs4 import BeautifulSoup
 import json
 
+
 class Scraper(Protocol):
     """
     Main Protocol class for Scrapers 
 
     """
+
     def scrape(self,max_movie:int = 20) -> None:
         pass
 
@@ -78,7 +80,8 @@ class FromCinemaScraper:
         
 
         return articel_list
-    
+
+
     def parse(self,articel_list) -> dict:
 
         movie_counter = 1
@@ -105,10 +108,6 @@ class FromCinemaScraper:
 
         return self.__parsed_data
         
-
-
-
-
 
 class CaffeCinemaScraper:
 
@@ -153,10 +152,12 @@ def parser_data(scraper:Scraper,data):
 
 
 if __name__ == "__main__":
+
     session = Client()
     contianer = ScraperContianer()
     scraper = contianer.resolve("fromcinema",session=session)
     data = extract_data(scraper)
+
     with open("data.json",'w',encoding="utf-8") as f:
         json.dump(parser_data(scraper,data),f,indent=4,ensure_ascii=False)
     
