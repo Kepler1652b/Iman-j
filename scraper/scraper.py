@@ -28,9 +28,8 @@ class ZoomgScraper:
     def scrape(self,max_movie:int = 20) -> dict:
         return "zoomg - scraper"
 
-    def parse(self,parser:Parser) -> dict:
-        pass
-
+    def parse(self) -> dict:
+        return "Not Parsed"
 
 
 class MoviemagScraper:
@@ -122,48 +121,68 @@ class FromCinemaScraper:
     def __init__(self,session):
         self.__baseUrl = "https://www.fromcinema.com/cinema-news/"
         self.__session:Client = session
-        self.__parsed_data:dict = {}
         self.__section = (".elementor-element-ce54b4c > div:nth-child(1) > div:nth-child(1)",".elementor-element-e6930cd > div:nth-child(1) > div:nth-child(1)")
     
     
-    def scrape(self) -> dict:
+    def scrape(self) ->  List[Dict[str,Any]]:
         
         data = self.__session.get(self.__baseUrl)
         self.__session.close()
         soup = BeautifulSoup(data.text,"html.parser")
         articel_soup = soup.select_one(self.__section[0])
         articel_list = articel_soup.find_all("article")
-        
-
+    
         return articel_list
 
 
-    def parse(self,articel_list) -> dict:
+    def parse(self, article_list):
+            movie_counter = 1
+            data = []
+            for article in article_list:
+                # Title and URL
+                title_tag = article.find("h3", class_="elementor-post__title")
+                title = title_tag.get_text(strip=True) if title_tag else "Null"
+                url = title_tag.find("a")["href"] if title_tag and title_tag.find("a") else "Null"
 
-        movie_counter = 1
-        for articel in articel_list:
-            title:str = articel.find("h3",attrs={"class":"elementor-post__title"}).text
-            description:str  = articel.find("p").text
-            author:str = articel.find("span",attrs={"class":"elementor-post-author"}).text
-            date:str = articel.find("span",attrs={"class":"elementor-post-date"}).text
-            time:str = articel.find("span",attrs={"class":"elementor-post-time"}).text
-            try:
-                image_url = articel.find("img").attrs.get("src")
-            except Exception:
-                image_url = "Null"
+                # Excerpt / Description
+                description_tag = article.find("div", class_="elementor-post__excerpt")
+                description = description_tag.get_text(strip=True) if description_tag else "Null"
 
-            self.__parsed_data.setdefault(f"Movie{movie_counter}",{})
-            self.__parsed_data[f"Movie{movie_counter}"]["title"] = title.strip()
-            self.__parsed_data[f"Movie{movie_counter}"]["description"] = description.strip()
-            self.__parsed_data[f"Movie{movie_counter}"]["author"] = author.strip()
-            self.__parsed_data[f"Movie{movie_counter}"]["date"] = date.strip()
-            self.__parsed_data[f"Movie{movie_counter}"]["time"] = time.strip()
-            self.__parsed_data[f"Movie{movie_counter}"]["image_url"] = image_url.strip()
+                # Meta info
+                author_tag = article.find("span", class_="elementor-post-author")
+                author = author_tag.get_text(strip=True) if author_tag else "Null"
 
-            movie_counter += 1
+                date_tag = article.find("span", class_="elementor-post-date")
+                date = date_tag.get_text(strip=True) if date_tag else "Null"
 
-        return self.__parsed_data
-        
+                time_tag = article.find("span", class_="elementor-post-time")
+                time = time_tag.get_text(strip=True) if time_tag else "Null"
+
+                # Image (optional)
+                img_tag = article.find("img")
+                image_url = img_tag.get("src", "Null") if img_tag else "Null"
+
+                # Read more link (optional)
+                read_more_tag = article.find("a", class_="elementor-post__read-more")
+                read_more_url = read_more_tag["href"] if read_more_tag else url
+
+                # Save parsed data
+                
+                data_dict = {
+                        "title": title,
+                        "url": url,
+                        "description": description,
+                        "author": author,
+                        "date": date,
+                        "time": time,
+                        "image_url": image_url,
+                        "read_more_url": read_more_url
+                }
+                data.append(data_dict)
+                movie_counter += 1
+
+            return data
+            
 
 class CaffeCinemaScraper:
 
@@ -220,7 +239,7 @@ class CaffeCinemaScraper:
 
 class ScraperContianer:
     def __init__(self):
-        self.__scraper_map : dict= {
+        self.scraper_map : dict= {
             "zoomg":ZoomgScraper,
             "gamefa":GameFaScraper,
             "caffecinema":CaffeCinemaScraper,
@@ -229,7 +248,7 @@ class ScraperContianer:
         }
 
     def resolve(self,website:str,session) -> Scraper:
-        scraper = self.__scraper_map.get(website)
+        scraper = self.scraper_map.get(website)
         if scraper:
             return scraper(session) 
         raise ValueError("site not supported ")
@@ -251,10 +270,15 @@ if __name__ == "__main__":
 
     session = Client()
     contianer = ScraperContianer()
-    scraper = contianer.resolve("caffecinema",session=session)
-    data = extract_data(scraper)
-    
-    print(json.dumps(parser_data(scraper,data), ensure_ascii=False, indent=2))
-    # with open("data.json",'w',encoding="utf-8") as f:
-    #     json.dump(parsed_data_list,f,indent=4,ensure_ascii=False)
-    
+
+
+    for site in contianer.scraper_map.keys():
+        print(f"Fetch Data From {site} ")
+        scraper = contianer.resolve(site,session=session)
+        data = extract_data(scraper)
+        parsed_data_list = parser_data(scraper,data)
+
+        with open(f"scraper/json/{site}_data.json",'w',encoding="utf-8") as f:
+            json.dump(parsed_data_list,f,indent=4,ensure_ascii=False)
+        print("Write Finished")
+        
