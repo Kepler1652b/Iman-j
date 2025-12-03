@@ -1,9 +1,10 @@
-from typing import Protocol
-from httpx import Client
+from typing import Any, Protocol,Dict,List
+from httpx import Client,post,get
 from data_parser import Parser
 from bs4 import BeautifulSoup
+from scraper_utilities import format_timestamp
 import json
-
+import feedparser
 
 class Scraper(Protocol):
     """
@@ -37,28 +38,83 @@ class MoviemagScraper:
     def __init__(self,session):
         self.__baseUrl = "https://moviemag.ir/category/%d8%a7%d8%ae%d8%a8%d8%a7%d8%b1/%d8%a7%d8%ae%d8%a8%d8%a7%d8%b1-%d8%b3%db%8c%d9%86%d9%85%d8%a7%db%8c-%d8%ac%d9%87%d8%a7%d9%86/"
         self.__session:Client = session
+        self.__RSS_URL = "https://moviemag.ir/category/%d8%a7%d8%ae%d8%a8%d8%a7%d8%b1/%d8%a7%d8%ae%d8%a8%d8%a7%d8%b1-%d8%b3%db%8c%d9%86%d9%85%d8%a7%db%8c-%d8%ac%d9%87%d8%a7%d9%86/feed/"
 
-    def scrape(self,max_movie:int = 20) -> dict:
-        return "moviemag - scraper"
+    def scrape(self) -> dict:
+        feed = feedparser.parse(self.__RSS_URL)
+        return feed
+    
 
-    def parse(self,parser:Parser) -> dict:
-        pass
+    def parse(self,feed) ->  List[Dict[str,Any]]:
+        data = []
+        for entry in feed.entries:
+            data_dict : Dict = {
+                "Title": entry.get("title"),
+                "Link": entry.get("link"),
+                "Published":entry.get("published", entry.get("updated", "N/A")),
+                "Summary/Description:":entry.get("summary", "")[:200],
+            }
+            data.append(data_dict)
 
+        return data
 
 
 class GameFaScraper:
 
     def __init__(self,session):
-        self.__baseUrl = "https://gamefa.com/"
+        self.__baseUrl = "https://gamefa.com/category/cinema/"
         self.__session:Client = session
 
     def scrape(self,max_movie:int = 20) -> dict:
-        return "gamefa - scraper"
+        response = session.get(self.__baseUrl)
+        html = response.text
+        return html
+    
 
-    def parse(self,parser:Parser) -> dict:
-        pass
+    def parse(self,html) ->  List[Dict[str,Any]]:
+        data = []
+        soup = BeautifulSoup(html, "html.parser")
 
+        # Find all news cards
+        news_cards = soup.find_all("div", class_="row align-items-center")
 
+        for card in news_cards:
+            # Category
+            category = card.find("span", class_="category")
+            category_text = category.text.strip() if category else "N/A"
+
+            # Title
+            title = card.find("h4", class_="title")
+            title_text = title.text.strip() if title else "N/A"
+
+            # Time
+            time = card.find("div", class_="time")
+            time_text = time.find("span").text.strip() if time else "N/A"
+
+            # Comments
+            comments = card.find("div", class_="comment-count")
+            comments_text = comments.find("span").text.strip() if comments else "0"
+
+            # Likes
+            likes = card.find("div", class_="like-count")
+            likes_text = likes.find("span").text.strip() if likes else "0"
+
+            # Thumbnail
+            img_tag = card.find("img")
+            img_src = img_tag['src'] if img_tag else "N/A"
+
+            data_dcit={
+                "category": category_text,
+                "title": title_text,
+                "time": time_text,
+                "comments": comments_text,
+                "likes": likes_text,
+                "thumbnail": img_src
+            }
+
+            data.append(data_dcit)
+
+        return data
 
 
 class FromCinemaScraper:
@@ -70,7 +126,7 @@ class FromCinemaScraper:
         self.__section = (".elementor-element-ce54b4c > div:nth-child(1) > div:nth-child(1)",".elementor-element-e6930cd > div:nth-child(1) > div:nth-child(1)")
     
     
-    def scrape(self,max_movie:int = 20) -> dict:
+    def scrape(self) -> dict:
         
         data = self.__session.get(self.__baseUrl)
         self.__session.close()
@@ -114,12 +170,52 @@ class CaffeCinemaScraper:
     def __init__(self,session):
         self.__baseUrl = "https://caffecinema.com/category/%D8%B3%DB%8C%D9%86%D9%85%D8%A7%DB%8C-%D8%AC%D9%87%D8%A7%D9%86"
         self.__session:Client = session
+        self.headers = {
 
-    def scrape(self,max_movie:int = 20) -> dict:
-        return "caffecinema - scraper"
+                        "X-Requested-With": "XMLHttpRequest",
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        "User-Agent": "Mozilla/5.0"
+                    }
+        self.request_data = {
+                        "dfh": "9def4c47bff842ebd0aeabba0f9c5502"
+                    }
 
-    def parse(self,parser:Parser) -> dict:
-        pass
+
+
+    def scrape(self) -> dict:
+
+        # Make the POST request
+        response = session.post(self.__baseUrl, headers=self.headers, data=self.request_data)
+        response.raise_for_status() # Raise an error if request fails
+
+        # Parse the JSON
+        data = response.json()
+        news_list = data.get("list", [])
+
+        return news_list
+
+
+    def parse(self,news_list) -> List[Dict[str,Any]] :
+
+        # Parse all news items
+        all_news = []
+        for news in news_list:
+            parsed_news = {
+                "id": news.get("id"),
+                "title": news.get("title"),
+                "excerpt": news.get("excerpt"),
+                "content": news.get("content"),
+                "slug": news.get("name"),
+                "likes": news.get("like_count"),
+                "dislikes": news.get("dislike_count"),
+                "comments": news.get("comment_count"),
+                "published_at": format_timestamp(news.get("publish_at")),
+                "thumbnail": "https://caffecinema.com" + news.get("thumbnail") if news.get("thumbnail") else None,
+                "categories": [cat.get("name") for cat in news.get("category", [])]
+            }
+            all_news.append(parsed_news)
+
+        return all_news
 
 
 class ScraperContianer:
@@ -155,9 +251,10 @@ if __name__ == "__main__":
 
     session = Client()
     contianer = ScraperContianer()
-    scraper = contianer.resolve("fromcinema",session=session)
+    scraper = contianer.resolve("caffecinema",session=session)
     data = extract_data(scraper)
-
-    with open("data.json",'w',encoding="utf-8") as f:
-        json.dump(parser_data(scraper,data),f,indent=4,ensure_ascii=False)
+    
+    print(json.dumps(parser_data(scraper,data), ensure_ascii=False, indent=2))
+    # with open("data.json",'w',encoding="utf-8") as f:
+    #     json.dump(parsed_data_list,f,indent=4,ensure_ascii=False)
     
