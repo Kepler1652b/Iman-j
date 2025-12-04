@@ -1,10 +1,13 @@
 from typing import Any, Protocol,Dict,List
-from httpx import Client,post,get
-from data_parser import Parser
+from httpx import Client
 from bs4 import BeautifulSoup
-from scraper_utilities import format_timestamp
+from database.db import NewsCRUD
+from .scraper_utilities import format_timestamp
 import json
 import feedparser
+from sqlmodel import Session
+
+
 
 class Scraper(Protocol):
     """
@@ -18,18 +21,34 @@ class Scraper(Protocol):
     def parse(self,data) -> dict:
         pass
 
+    def detail_parser(self,data):
+        pass
+
 
 class ZoomgScraper:
 
     def __init__(self,session):
-        self.__baseUrl = "https://www.zoomg.ir/cinema/"
+        self.__baseUrl = "https://api2.zoomg.ir/editorial/api/articles/browse?sort=Newest&publishDate=All&readingTime=All&pageNumber=1&PageSize=20"
         self.__session:Client = session
+        self.__headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:145.0) Gecko/20100101 Firefox/145.0',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                "Accept-Language":"en-US,en;q=0.5",
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive',
+                # "Cookie":"_pk_ref.2.01fe=%5B%22%22%2C%22%22%2C1764827723%2C%22https%3A%2F%2Fwww.karlancer.com%2F%22%5D; _pk_id.2.01fe=4b60e94eaab94e4f.1762239023.; bob_anonymous_id=4c1d7b43-b5cf-4216-afd6-e0e074c0f0b1; _ga_BX3DD5ZERM=GS2.1.s1764827726$o2$g1$t1764828266$j51$l0$h286395348; _ga=GA1.1.1560322300.1762239025; analytics_campaign={%22source%22:%22karlancer.com%22%2C%22medium%22:%22referral%22}; analytics_token=1fa1eb7d-c2e8-7e3d-ee8e-2a69ad3cd68a; _yngt=01K96T34A7YSZHFJ9M6B0VKZGH; _yngt_iframe=1; _z_sess=176c3ae3-39d3-4574-83f3-14c67a696b02; _pk_ses.2.01fe=1; analytics_session_token=d7fa997a-778b-daaa-4724-39d312fd4a7a; yektanet_session_last_activity=12/4/2025"
+            }
 
     def scrape(self,max_movie:int = 20) -> dict:
-        return "zoomg - scraper"
+        response = self.__session.get(self.__baseUrl)
+        # print(response.json())
+        return response.json()
+
 
     def parse(self,data) -> dict:
-        return "Not Parsed"
+        soup = BeautifulSoup(data,"html.parser")
+        news_list = soup.select_one("div.px-4").find_all("div",attrs={"class":"scroll-m-16"})
+        print(news_list)
 
 
 class MoviemagScraper:
@@ -50,23 +69,37 @@ class MoviemagScraper:
             formated:dict = {
                 "title":entry.get("title"), 
                 "type":"", 
-                "description":entry.get("summary", "")[:200],
+                "content":'',
                 "year":entry.get("published", entry.get("updated", "N/A")), 
-                "duration":"", 
-                "imdb":"", 
-                "persian":"", 
                 "image":"", 
-                "cover":"", 
-                "trailer":{}, 
-                "genres":[{}], 
-                "countries":[{}], 
-                "actors":[{}], 
-
-
+                'link':entry.get("link"),
             }
+
             data.append(formated)
 
         return data
+    
+
+    def detail_parser(self,data):
+        content = ''
+        data_list = []
+        for post in data:
+            link = post.get("link")
+            response = self.__session.get(link)
+
+            soup = BeautifulSoup(response.text,'html.parser')
+            text_list = soup.select_one(".elementor-element-f41c1d8 > div:nth-child(1)").find_all("p")
+
+            image_url = soup.select_one(".harika-featuredimage-widget").find('img').attrs.get("data-lazy-src")
+            for p in text_list:
+                content += p.text
+
+            post["content"] = content
+            post['image'] = image_url
+
+            data_list.append(post)
+            content = ''
+        return data_list
 
 
 class GameFaScraper:
@@ -76,7 +109,7 @@ class GameFaScraper:
         self.__session:Client = session
 
     def scrape(self,max_movie:int = 20) -> dict:
-        response = session.get(self.__baseUrl)
+        response = self.__session.get(self.__baseUrl)
         html = response.text
         return html
     
@@ -85,14 +118,18 @@ class GameFaScraper:
         data = []
         soup = BeautifulSoup(html, "html.parser")
 
+        card_list = soup.select_one(".posts-list > div:nth-child(1)").find_all("div",attrs={'class':"col-12"})
         # Find all news cards
-        news_cards = soup.find_all("div", class_="row align-items-center")
 
-        for card in news_cards:
+        # news_cards = soup.find_all("div", class_="row align-items-center")
+
+        for master_card in card_list:
             # Category
+            card = master_card.find("div", class_="row align-items-center")
+
             category = card.find("span", class_="category")
             category_text = category.text.strip() if category else "N/A"
-
+            
             # Title
             title = card.find("h4", class_="title")
             title_text = title.text.strip() if title else "N/A"
@@ -112,36 +149,44 @@ class GameFaScraper:
             # Thumbnail
             img_tag = card.find("img")
             img_src = img_tag['src'] if img_tag else "N/A"
+            
 
-            # data_dcit={
-            #     "category": category_text,
-            #     "title": title_text,
-            #     "time": time_text,
-            #     "comments": comments_text,
-            #     "likes": likes_text,
-            #     "thumbnail": img_src
-            # }
-            formated:dict = {
-                "title":title_text, 
-                "type":"", 
-                "description":"", 
-                "year":"", 
-                "duration":time_text, 
-                "imdb":"", 
-                "persian":"", 
-                "image":img_src, 
-                "cover":img_src, 
-                "trailer":{}, 
-                "genres":[{}], 
-                "countries":[{}], 
-                "actors":[{}], 
+            link = master_card.find("a").attrs.get("href")
+            
+            if category_text == "اخبار سینما":
+                formated:dict = {
+                    "title":title_text, 
+                    "type":"", 
+                    "content":"", 
+                    "year":"", 
+                    "image":img_src, 
+                    "link":link, 
 
-
-            }
+                }
+            else:
+                continue
             data.append(formated)
 
         return data
 
+    def detail_parser(self,data):
+        content = ''
+        data_list = []
+        for post in data:
+            link = post.get("link")
+            response = self.__session.get(link)
+
+            soup = BeautifulSoup(response.text,'html.parser')
+            text_list = soup.select_one(".post-content").find_all("p")
+
+            for p in text_list:
+                content += p.text
+
+            post["content"] = content
+            data_list.append(post)
+            content = ''
+        return data_list
+    
 
 class FromCinemaScraper:
 
@@ -154,7 +199,6 @@ class FromCinemaScraper:
     def scrape(self) ->  List[Dict[str,Any]]:
         
         data = self.__session.get(self.__baseUrl)
-        self.__session.close()
         soup = BeautifulSoup(data.text,"html.parser")
         articel_soup = soup.select_one(self.__section[0])
         articel_list = articel_soup.find_all("article")
@@ -192,41 +236,36 @@ class FromCinemaScraper:
                 read_more_tag = article.find("a", class_="elementor-post__read-more")
                 read_more_url = read_more_tag["href"] if read_more_tag else url
 
-                # Save parsed data
-                
-                # data_dict = {
-                #         "title": title,
-                #         "url": url,
-                #         "description": description,
-                #         "author": author,
-                #         "date": date,
-                #         "time": time,
-                #         "image_url": image_url,
-                #         "read_more_url": read_more_url
-                # }
-
-
                 formated:dict = {
                         "title":title, 
                         "type":"", 
-                        "description":description, 
+                        "content":description, 
                         "year":date, 
-                        "duration":time, 
-                        "imdb":"", 
-                        "persian":"", 
                         "image":image_url, 
-                        "cover":"", 
-                        "trailer":{}, 
-                        "genres":[{}], 
-                        "countries":[{}], 
-                        "actors":[{}], 
-
-
+                        "link":read_more_url, 
                     }
+                
                 data.append(formated)
 
             return data
             
+    def detail_parser(self,data):
+        content = ''
+        data_list = []
+        for post in data:
+            link = post.get("link")
+            response = self.__session.get(link)
+
+            soup = BeautifulSoup(response.text,'html.parser')
+            text_list = soup.find_all("p")
+            
+            for p in text_list:
+                content += p.text
+            post["content"] = content
+            data_list.append(post)
+            content = ''
+        return data_list
+    
 
 class CaffeCinemaScraper:
 
@@ -248,7 +287,7 @@ class CaffeCinemaScraper:
     def scrape(self) -> dict:
 
         # Make the POST request
-        response = session.post(self.__baseUrl, headers=self.headers, data=self.request_data)
+        response = self.__session.post(self.__baseUrl, headers=self.headers, data=self.request_data)
         response.raise_for_status() # Raise an error if request fails
 
         # Parse the JSON
@@ -263,40 +302,23 @@ class CaffeCinemaScraper:
         # Parse all news items
         all_news = []
         for news in news_list:
-            # parsed_news = {
-            #     "id": news.get("id"),
-            #     "title": news.get("title"),
-            #     "excerpt": news.get("excerpt"),
-            #     "content": news.get("content"),
-            #     "slug": news.get("name"),
-            #     "likes": news.get("like_count"),
-            #     "dislikes": news.get("dislike_count"),
-            #     "comments": news.get("comment_count"),
-            #     "published_at": format_timestamp(news.get("publish_at")),
-            #     "thumbnail": "https://caffecinema.com" + news.get("thumbnail") if news.get("thumbnail") else None,
-            #     "categories": [cat.get("name") for cat in news.get("category", [])]
-            # }
-
+            content_soup = BeautifulSoup(news.get("content"),'html.parser')
+            content = content_soup.text
             formated:dict = {
                 "title":news.get("title"), 
                 "type":"", 
-                "description": news.get("content"), 
+                "content": content, 
                 "year":format_timestamp(news.get("publish_at")), 
-                "duration":"", 
-                "imdb":"", 
-                "persian":"", 
                 "image":"https://caffecinema.com" + news.get("thumbnail") if news.get("thumbnail") else None, 
-                "cover":"https://caffecinema.com" + news.get("thumbnail") if news.get("thumbnail") else None, 
-                "trailer":{}, 
-                "genres":[{}], 
-                "countries":[{}], 
-                "actors":[{}], 
-
-
+                "link":"https://caffecinema.com/" + news.get("name") if news.get("name") else None,
             }
             all_news.append(formated)
 
         return all_news
+    
+
+    def detail_parser(self,data):
+        return data
 
 
 class ScraperContianer:
@@ -328,19 +350,10 @@ def parser_data(scraper:Scraper,data):
 
 
 
-if __name__ == "__main__":
-
-    session = Client()
-    contianer = ScraperContianer()
 
 
-    for site in contianer.scraper_map.keys():
-        print(f"Fetch Data From {site} ")
-        scraper = contianer.resolve(site,session=session)
-        data = extract_data(scraper)
-        parsed_data_list = parser_data(scraper,data)
 
-        with open(f"scraper/json/{site}_data.json",'w',encoding="utf-8") as f:
-            json.dump(parsed_data_list,f,indent=4,ensure_ascii=False)
-        print("Write Finished")
+
+
+
         
