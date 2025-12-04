@@ -136,3 +136,34 @@ class Movie(MovieBase, table=True):
 
 
 
+
+class NewsBase(SQLModel):
+    title:str = Field(unique=True,index=True)
+    type_:str
+    content:str
+    year:str
+    image:str
+    link:str = Field(unique=True)
+
+
+class News(NewsBase,table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+
+class PostBase(SQLModel):
+    title:str = Field(unique=True)
+    type_:str
+    summery:str
+
+    schedule:str|None
+
+    image:str
+    trailer:str|None
+
+    use_trailer : bool
+    # links : List[str] | None
+    # tags : Optional[List[str]] | None
+
+
+class Post(PostBase,table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)

@@ -4,8 +4,8 @@ This Modul Contains DataBase CRUD action For all Tables
 
 from sqlmodel import create_engine,select,SQLModel,Session
 from typing import List, Optional
-from models import (
-    User, UserBase,
+from .models import (
+    News, NewsBase, User, UserBase,
     Movie, MovieBase,
     Genre, GenreBase,
     Country, CountryBase,
@@ -13,7 +13,7 @@ from models import (
     Trailer, TrailerBase,
     MovieGenreLink,
     MovieCountryLink,
-    MovieActorLink
+    MovieActorLink,Post,PostBase
 )
 
 
@@ -547,14 +547,126 @@ class MovieCRUD:
 
 
 
+class NewsCRUD:
+    """
+     Class for News CRUD actions
+    """
+    @staticmethod
+    def create(session: Session, news_data: NewsBase) -> News:
+        
+        """Create a new news"""
+        news = News.model_validate(news_data)
+        session.add(news)
+        session.commit()
+        session.refresh(news)
+        return news
+    
+    @staticmethod
+    def get_by_id(session: Session, news_id: int) -> Optional[News]:
+        """
+        Get news by ID
+        returns None if News with id dose not exist
+        """
+        return session.get(News, news_id)
+    
+    @staticmethod
+    def get_all(session: Session, skip: int = 0, limit: int = 100) -> List[News]:
+        """Get all news with pagination"""
+        statement = select(News).offset(skip).limit(limit)
+        return list(session.exec(statement).all())
+
+    
+    @staticmethod
+    def update(session: Session, news_id: int, news_data: dict) -> Optional[News]:
+        """Update news"""
+        news = session.get(News, news_id)
+        if not news:
+            return None
+        
+        for key, value in news_data.items():
+            setattr(news, key, value)
+        
+        session.add(news)
+        session.commit()
+        session.refresh(news)
+        return news
+    
+    @staticmethod
+    def delete(session: Session, news_id: int) -> bool:
+        """Delete news"""
+        news = session.get(News, news_id)
+        if not news:
+            return False
+        
+        session.delete(news)
+        session.commit()
+        return True
+
+class PostCRUD:
+    """
+     Class for Post CRUD actions
+    """
+    @staticmethod
+    def create(session: Session, post_data: PostBase) -> Post:
+        
+        """Create a new post"""
+        post = Post.model_validate(post_data)
+        session.add(post)
+        session.commit()
+        session.refresh(post)
+        return post
+    
+    @staticmethod
+    def get_by_id(session: Session, post_id: int) -> Optional[Post]:
+        """
+        Get post by ID
+        returns None if News with id dose not exist
+        """
+        return session.get(Post, post_id)
+    
+    @staticmethod
+    def get_all(session: Session, skip: int = 0, limit: int = 100) -> List[Post]:
+        """Get all post with pagination"""
+        statement = select(Post).offset(skip).limit(limit)
+        return list(session.exec(statement).all())
+
+    
+    @staticmethod
+    def update(session: Session, post_id: int, post_data: dict) -> Optional[Post]:
+        """Update post"""
+        post = session.get(Post, post_id)
+        if not post:
+            return None
+        
+        for key, value in post_data.items():
+            setattr(post, key, value)
+        
+        session.add(post)
+        session.commit()
+        session.refresh(post)
+        return post
+    
+    @staticmethod
+    def delete(session: Session, post_id: int) -> bool:
+        """Delete post"""
+        post = session.get(Post, post_id)
+        if not post:
+            return False
+        
+        session.delete(post)
+        session.commit()
+        return True
 
 class Engine:
-    engine = create_engine("sqlite:///movies.db")
 
+    @staticmethod
     def create_db(engine):
         SQLModel.metadata.create_all(engine)
 
 
 
+engine = create_engine("sqlite:///movies.db")
+def create_db():
+    Engine.create_db(engine)
     
-    
+

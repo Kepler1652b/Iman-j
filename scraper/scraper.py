@@ -15,7 +15,7 @@ class Scraper(Protocol):
     def scrape(self,max_movie:int = 20) -> None:
         pass
 
-    def parse(self) -> dict:
+    def parse(self,data) -> dict:
         pass
 
 
@@ -28,7 +28,7 @@ class ZoomgScraper:
     def scrape(self,max_movie:int = 20) -> dict:
         return "zoomg - scraper"
 
-    def parse(self) -> dict:
+    def parse(self,data) -> dict:
         return "Not Parsed"
 
 
@@ -47,13 +47,24 @@ class MoviemagScraper:
     def parse(self,feed) ->  List[Dict[str,Any]]:
         data = []
         for entry in feed.entries:
-            data_dict : Dict = {
-                "Title": entry.get("title"),
-                "Link": entry.get("link"),
-                "Published":entry.get("published", entry.get("updated", "N/A")),
-                "Summary/Description:":entry.get("summary", "")[:200],
+            formated:dict = {
+                "title":entry.get("title"), 
+                "type":"", 
+                "description":entry.get("summary", "")[:200],
+                "year":entry.get("published", entry.get("updated", "N/A")), 
+                "duration":"", 
+                "imdb":"", 
+                "persian":"", 
+                "image":"", 
+                "cover":"", 
+                "trailer":{}, 
+                "genres":[{}], 
+                "countries":[{}], 
+                "actors":[{}], 
+
+
             }
-            data.append(data_dict)
+            data.append(formated)
 
         return data
 
@@ -102,16 +113,32 @@ class GameFaScraper:
             img_tag = card.find("img")
             img_src = img_tag['src'] if img_tag else "N/A"
 
-            data_dcit={
-                "category": category_text,
-                "title": title_text,
-                "time": time_text,
-                "comments": comments_text,
-                "likes": likes_text,
-                "thumbnail": img_src
-            }
+            # data_dcit={
+            #     "category": category_text,
+            #     "title": title_text,
+            #     "time": time_text,
+            #     "comments": comments_text,
+            #     "likes": likes_text,
+            #     "thumbnail": img_src
+            # }
+            formated:dict = {
+                "title":title_text, 
+                "type":"", 
+                "description":"", 
+                "year":"", 
+                "duration":time_text, 
+                "imdb":"", 
+                "persian":"", 
+                "image":img_src, 
+                "cover":img_src, 
+                "trailer":{}, 
+                "genres":[{}], 
+                "countries":[{}], 
+                "actors":[{}], 
 
-            data.append(data_dcit)
+
+            }
+            data.append(formated)
 
         return data
 
@@ -136,7 +163,6 @@ class FromCinemaScraper:
 
 
     def parse(self, article_list):
-            movie_counter = 1
             data = []
             for article in article_list:
                 # Title and URL
@@ -168,18 +194,36 @@ class FromCinemaScraper:
 
                 # Save parsed data
                 
-                data_dict = {
-                        "title": title,
-                        "url": url,
-                        "description": description,
-                        "author": author,
-                        "date": date,
-                        "time": time,
-                        "image_url": image_url,
-                        "read_more_url": read_more_url
-                }
-                data.append(data_dict)
-                movie_counter += 1
+                # data_dict = {
+                #         "title": title,
+                #         "url": url,
+                #         "description": description,
+                #         "author": author,
+                #         "date": date,
+                #         "time": time,
+                #         "image_url": image_url,
+                #         "read_more_url": read_more_url
+                # }
+
+
+                formated:dict = {
+                        "title":title, 
+                        "type":"", 
+                        "description":description, 
+                        "year":date, 
+                        "duration":time, 
+                        "imdb":"", 
+                        "persian":"", 
+                        "image":image_url, 
+                        "cover":"", 
+                        "trailer":{}, 
+                        "genres":[{}], 
+                        "countries":[{}], 
+                        "actors":[{}], 
+
+
+                    }
+                data.append(formated)
 
             return data
             
@@ -219,20 +263,38 @@ class CaffeCinemaScraper:
         # Parse all news items
         all_news = []
         for news in news_list:
-            parsed_news = {
-                "id": news.get("id"),
-                "title": news.get("title"),
-                "excerpt": news.get("excerpt"),
-                "content": news.get("content"),
-                "slug": news.get("name"),
-                "likes": news.get("like_count"),
-                "dislikes": news.get("dislike_count"),
-                "comments": news.get("comment_count"),
-                "published_at": format_timestamp(news.get("publish_at")),
-                "thumbnail": "https://caffecinema.com" + news.get("thumbnail") if news.get("thumbnail") else None,
-                "categories": [cat.get("name") for cat in news.get("category", [])]
+            # parsed_news = {
+            #     "id": news.get("id"),
+            #     "title": news.get("title"),
+            #     "excerpt": news.get("excerpt"),
+            #     "content": news.get("content"),
+            #     "slug": news.get("name"),
+            #     "likes": news.get("like_count"),
+            #     "dislikes": news.get("dislike_count"),
+            #     "comments": news.get("comment_count"),
+            #     "published_at": format_timestamp(news.get("publish_at")),
+            #     "thumbnail": "https://caffecinema.com" + news.get("thumbnail") if news.get("thumbnail") else None,
+            #     "categories": [cat.get("name") for cat in news.get("category", [])]
+            # }
+
+            formated:dict = {
+                "title":news.get("title"), 
+                "type":"", 
+                "description": news.get("content"), 
+                "year":format_timestamp(news.get("publish_at")), 
+                "duration":"", 
+                "imdb":"", 
+                "persian":"", 
+                "image":"https://caffecinema.com" + news.get("thumbnail") if news.get("thumbnail") else None, 
+                "cover":"https://caffecinema.com" + news.get("thumbnail") if news.get("thumbnail") else None, 
+                "trailer":{}, 
+                "genres":[{}], 
+                "countries":[{}], 
+                "actors":[{}], 
+
+
             }
-            all_news.append(parsed_news)
+            all_news.append(formated)
 
         return all_news
 
