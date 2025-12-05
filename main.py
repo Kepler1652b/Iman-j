@@ -32,7 +32,7 @@ if __name__ == "__main__":
     session = Client()
     contianer = ScraperContianer()
     create_db()
-    sc_list = ['moviemag','caffecinema','fromcinema','gamefa']
+    sc_list = ['moviemag',]
     for sc in sc_list:
         scraper = contianer.resolve(sc,session=session)
         data = extract_data(scraper)
