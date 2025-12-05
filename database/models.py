@@ -2,13 +2,11 @@
 This Modul Contains DataBase Models and tables 
 Do not change anything 
 """
-
-
-
 from typing import List, Optional
-from sqlmodel import SQLModel,Field,Relationship
+from sqlmodel import SQLModel,Field,Relationship,Column
+from sqlalchemy import String
 from datetime import datetime
-
+from pydantic import HttpUrl,field_validator
 
 class UserBase(SQLModel):
     """
@@ -16,8 +14,8 @@ class UserBase(SQLModel):
 
     """
 
-    username:str | None # telegram username
-    telegram_id : int = Field(index=True) # telegram chat id 
+    username:str | None = Field(unique=True) # telegram username
+    telegram_id : int = Field(unique=True,index=True) # telegram chat id 
     is_active : bool = Field(default=False)
     is_admin: bool = Field(default=False)
     is_superadmin: bool = Field(default=False)
@@ -47,7 +45,7 @@ class GenreBase(SQLModel):
     """
     Genra Base model for Genre table
     """
-    title: str = Field(index=True)
+    title: str = Field(index=True,unique=True)
 
 
 class Genre(GenreBase, table=True):
@@ -62,7 +60,7 @@ class CountryBase(SQLModel):
     """
     Country Base Model for Country Table
     """
-    title: str
+    title: str = Field(unique=True)
     image_url: str
 
 
@@ -78,7 +76,7 @@ class ActorBase(SQLModel):
     """
     Actor Base Model for Actor Table
     """
-    name: str
+    name: str = Field(unique=True)
     image_url: str
 
 
@@ -95,7 +93,7 @@ class TrailerBase(SQLModel):
     Trailer Base Model for Trailer table
     """
     type_: str 
-    url: str
+    url: str = Field(sa_column=Column(String(800)))
 
 
 class Trailer(TrailerBase, table=True):
@@ -106,20 +104,26 @@ class Trailer(TrailerBase, table=True):
     movie_id: Optional[int] = Field(default=None, foreign_key="movie.id")
     movie: Optional["Movie"] = Relationship(back_populates="trailers")
 
+    @field_validator('url')
+    @classmethod
+    def validate_url(cls, v: str) -> str:
+        # This validates it's a proper URL
+        HttpUrl(v)
+        return v
 
 class MovieBase(SQLModel):
     """
     Movie Base Model for table Movie
     """
-    title: str = Field(index=True)
-    type_: str
-    description: str
-    year: str
-    duration: int
+    title: str = Field(index=True,unique=True)
+    type_: str 
+    description: str 
+    year: datetime | str
+    duration: int 
     imdb: float
     is_persian: bool
-    image_url: str
-    cover_url: str
+    image_url: str = Field(unique=True,sa_column=Column(String(800)))
+    cover_url: str = Field(sa_column=Column(String(800)))
 
 
 class Movie(MovieBase, table=True):
@@ -133,17 +137,23 @@ class Movie(MovieBase, table=True):
     countries: List[Country] = Relationship(back_populates="movies", link_model=MovieCountryLink)
     actors: List[Actor] = Relationship(back_populates="movies", link_model=MovieActorLink)
 
-
+    @field_validator('image_url', 'cover_url')
+    @classmethod
+    def validate_url(cls, v: str) -> str:
+        from pydantic import HttpUrl
+        # This validates it's a proper URL
+        HttpUrl(v)
+        return v
 
 
 
 class NewsBase(SQLModel):
     title:str = Field(unique=True,index=True)
-    type_:str
+    type_:str | None
     content:str
-    year:str
-    image:str
-    link:str = Field(unique=True)
+    year:datetime | str
+    image:str = Field(unique=True,sa_column=Column(String(800)))
+    link:str = Field(unique=True,sa_column=Column(String(800)))
 
 
 class News(NewsBase,table=True):
@@ -155,12 +165,13 @@ class PostBase(SQLModel):
     type_:str
     summery:str
 
-    schedule:str|None
+    schedule:datetime | None
 
     image:str
     trailer:str|None
 
     use_trailer : bool
+    
     # links : List[str] | None
     # tags : Optional[List[str]] | None
 
