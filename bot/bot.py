@@ -20,7 +20,7 @@ from telegram import (
 
 )
 
-TOKEN = "7322296332:AAH8sHGUv11XS_Ka7TceRYSbddibAfaumsA"
+TOKEN = ''
 
 class LayoutContianer:
     def __init__(self):

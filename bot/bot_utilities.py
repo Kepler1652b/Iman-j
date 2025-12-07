@@ -1,6 +1,8 @@
 from telegram import Bot, InputMediaPhoto
 from telegram.constants import ParseMode
 from telegram.error import TelegramError
+
+
 class TelegramMessageSender:
     """
     Send formatted messages with images to Telegram

@@ -5,7 +5,6 @@ from telegram import (
     Update,
     CallbackQuery,
     InlineKeyboardMarkup,
-    InlineKeyboardButton,
 
 )
 
