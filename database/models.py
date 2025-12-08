@@ -96,6 +96,15 @@ class TrailerBase(SQLModel):
     url: str = Field(sa_column=Column(String(800)))
 
 
+
+class TrailerBase(SQLModel):
+    """
+    Trailer Base Model for Trailer table
+    """
+    type_: str 
+    url: str
+
+
 class Trailer(TrailerBase, table=True):
     """
     Trailer table with movie attr refere Movie and id to movie row
@@ -104,26 +113,20 @@ class Trailer(TrailerBase, table=True):
     movie_id: Optional[int] = Field(default=None, foreign_key="movie.id")
     movie: Optional["Movie"] = Relationship(back_populates="trailers")
 
-    @field_validator('url')
-    @classmethod
-    def validate_url(cls, v: str) -> str:
-        # This validates it's a proper URL
-        HttpUrl(v)
-        return v
 
 class MovieBase(SQLModel):
     """
     Movie Base Model for table Movie
     """
-    title: str = Field(index=True,unique=True)
-    type_: str 
-    description: str 
-    year: datetime | str
-    duration: int 
+    title: str = Field(index=True)
+    type_: str
+    description: str
+    year: str
+    duration: int
     imdb: float
     is_persian: bool
-    image_url: str = Field(unique=True,sa_column=Column(String(800)))
-    cover_url: str = Field(sa_column=Column(String(800)))
+    image_url: str
+    cover_url: str
 
 
 class Movie(MovieBase, table=True):
@@ -137,27 +140,18 @@ class Movie(MovieBase, table=True):
     countries: List[Country] = Relationship(back_populates="movies", link_model=MovieCountryLink)
     actors: List[Actor] = Relationship(back_populates="movies", link_model=MovieActorLink)
 
-    @field_validator('image_url', 'cover_url')
-    @classmethod
-    def validate_url(cls, v: str) -> str:
-        from pydantic import HttpUrl
-        # This validates it's a proper URL
-        HttpUrl(v)
-        return v
+
+# class NewsBase(SQLModel):
+#     title:str = Field(unique=True,index=True)
+#     type_:str | None
+#     content:str
+#     year:datetime | str
+#     # image:str = Field(unique=True,sa_column=Column(String(800)))
+#     # link:str = Field(unique=True,sa_column=Column(String(800)))
 
 
-
-class NewsBase(SQLModel):
-    title:str = Field(unique=True,index=True)
-    type_:str | None
-    content:str
-    year:datetime | str
-    image:str = Field(unique=True,sa_column=Column(String(800)))
-    link:str = Field(unique=True,sa_column=Column(String(800)))
-
-
-class News(NewsBase,table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
+# class News(NewsBase,table=True):
+#     id: Optional[int] = Field(default=None, primary_key=True)
 
 
 class PostBase(SQLModel):
@@ -177,4 +171,4 @@ class PostBase(SQLModel):
 
 
 class Post(PostBase,table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)

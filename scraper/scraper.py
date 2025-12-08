@@ -86,6 +86,7 @@ class MoviemagScraper:
         return None
     
 
+
     def detail_parser(self,data:list):
         content = ''
         data_list = []
