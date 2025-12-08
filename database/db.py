@@ -17,7 +17,7 @@ import logging
 from contextlib import contextmanager
 
 from .models import (
-    News, NewsBase, User, UserBase,
+    User, UserBase,
     Movie, MovieBase,
     Genre, GenreBase,
     Country, CountryBase,
@@ -25,7 +25,7 @@ from .models import (
     Trailer, TrailerBase,
     MovieGenreLink,
     MovieCountryLink,
-    MovieActorLink, Post, PostBase
+    MovieActorLink,Post,PostBase,
 )
 
 # Setup logging
@@ -787,65 +787,65 @@ class MovieCRUD:
 
 
 
-class NewsCRUD:
-    """
-     Class for News CRUD actions
-    """
-    @staticmethod
-    @handle_db_errors("Create news")
-    def create(session: Session, news_data: NewsBase) -> News:
+# class NewsCRUD:
+#     """
+#      Class for News CRUD actions
+#     """
+#     @staticmethod
+#     @handle_db_errors("Create news")
+#     def create(session: Session, news_data: NewsBase) -> News:
         
-        """Create a new news"""
-        news = News.model_validate(news_data)
-        session.add(news)
-        session.commit()
-        session.refresh(news)
-        return news
+#         """Create a new news"""
+#         news = News.model_validate(news_data)
+#         session.add(news)
+#         session.commit()
+#         session.refresh(news)
+#         return news
     
-    @staticmethod
-    @handle_db_errors("Get news by ID")
-    def get_by_id(session: Session, news_id: int) -> Optional[News]:
-        """
-        Get news by ID
-        returns None if News with id dose not exist
-        """
-        return session.get(News, news_id)
+#     @staticmethod
+#     @handle_db_errors("Get news by ID")
+#     def get_by_id(session: Session, news_id: int) -> Optional[News]:
+#         """
+#         Get news by ID
+#         returns None if News with id dose not exist
+#         """
+#         return session.get(News, news_id)
     
-    @staticmethod
-    @handle_db_errors("Get all newses")
-    def get_all(session: Session, skip: int = 0, limit: int = 100) -> List[News]:
-        """Get all news with pagination"""
-        statement = select(News).offset(skip).limit(limit)
-        return list(session.exec(statement).all())
+#     @staticmethod
+#     @handle_db_errors("Get all newses")
+#     def get_all(session: Session, skip: int = 0, limit: int = 100) -> List[News]:
+#         """Get all news with pagination"""
+#         statement = select(News).offset(skip).limit(limit)
+#         return list(session.exec(statement).all())
 
     
-    @staticmethod
-    @handle_db_errors("Update news by ID")
-    def update(session: Session, news_id: int, news_data: dict) -> Optional[News]:
-        """Update news"""
-        news = session.get(News, news_id)
-        if not news:
-            return None
+#     @staticmethod
+#     @handle_db_errors("Update news by ID")
+#     def update(session: Session, news_id: int, news_data: dict) -> Optional[News]:
+#         """Update news"""
+#         news = session.get(News, news_id)
+#         if not news:
+#             return None
         
-        for key, value in news_data.items():
-            setattr(news, key, value)
+#         for key, value in news_data.items():
+#             setattr(news, key, value)
         
-        session.add(news)
-        session.commit()
-        session.refresh(news)
-        return news
+#         session.add(news)
+#         session.commit()
+#         session.refresh(news)
+#         return news
     
-    @staticmethod
-    @handle_db_errors("Delete news by ID")
-    def delete(session: Session, news_id: int) -> bool:
-        """Delete news"""
-        news = session.get(News, news_id)
-        if not news:
-            return False
+#     @staticmethod
+#     @handle_db_errors("Delete news by ID")
+#     def delete(session: Session, news_id: int) -> bool:
+#         """Delete news"""
+#         news = session.get(News, news_id)
+#         if not news:
+#             return False
         
-        session.delete(news)
-        session.commit()
-        return True
+#         session.delete(news)
+#         session.commit()
+#         return True
 
 class PostCRUD:
     """
