@@ -385,7 +385,7 @@ class CaffeCinemaScraper:
 class ScraperContianer:
     def __init__(self):
         self.scraper_map : dict= {
-            "zoomg":ZoomgScraper,
+            # "zoomg":ZoomgScraper,
             "gamefa":GameFaScraper,
             "caffecinema":CaffeCinemaScraper,
             "fromcinema":FromCinemaScraper,

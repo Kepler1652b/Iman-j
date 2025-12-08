@@ -40,6 +40,23 @@ class MovieActorLink(SQLModel, table=True):
 
 
 
+class SerialGenreLink(SQLModel, table=True):
+    serial_id: Optional[int] = Field(default=None, foreign_key="serial.id", primary_key=True)
+    genre_id: Optional[int] = Field(default=None, foreign_key="genre.id", primary_key=True)
+
+class SerialCountryLink(SQLModel, table=True):
+    serial_id: Optional[int] = Field(default=None, foreign_key="serial.id", primary_key=True)
+    country_id: Optional[int] = Field(default=None, foreign_key="country.id", primary_key=True)
+
+class SerialActorLink(SQLModel, table=True):
+    serial_id: Optional[int] = Field(default=None, foreign_key="serial.id", primary_key=True)
+    actor_id: Optional[int] = Field(default=None, foreign_key="actor.id", primary_key=True)
+
+
+
+
+
+
 
 class GenreBase(SQLModel):
     """
@@ -53,7 +70,8 @@ class Genre(GenreBase, table=True):
     Genre table with movies attr refere to List of Movie's
     """
     id: Optional[int] = Field(default=None, primary_key=True)
-    movies: List["Movie"] = Relationship(back_populates="genres", link_model=MovieGenreLink)
+    movies : List["Movie"] = Relationship(back_populates="genres", link_model=MovieGenreLink)
+    serials : List["Serial"] = Relationship(back_populates="genres", link_model=SerialGenreLink)
 
 
 class CountryBase(SQLModel):
@@ -70,6 +88,7 @@ class Country(CountryBase, table=True):
     """
     id: Optional[int] = Field(default=None, primary_key=True)
     movies: List["Movie"] = Relationship(back_populates="countries", link_model=MovieCountryLink)
+    serials: List["Serial"] = Relationship(back_populates="countries", link_model=SerialCountryLink)
 
 
 class ActorBase(SQLModel):
@@ -86,14 +105,8 @@ class Actor(ActorBase, table=True):
     """
     id: Optional[int] = Field(default=None, primary_key=True)
     movies: List["Movie"] = Relationship(back_populates="actors", link_model=MovieActorLink)
+    serials: List["Serial"] = Relationship(back_populates="actors", link_model=SerialActorLink)
 
-
-class TrailerBase(SQLModel):
-    """
-    Trailer Base Model for Trailer table
-    """
-    type_: str 
-    url: str = Field(sa_column=Column(String(800)))
 
 
 
@@ -111,7 +124,9 @@ class Trailer(TrailerBase, table=True):
     """
     id: Optional[int] = Field(default=None, primary_key=True)
     movie_id: Optional[int] = Field(default=None, foreign_key="movie.id")
+    serial_id: Optional[int] = Field(default=None, foreign_key="serial.id")
     movie: Optional["Movie"] = Relationship(back_populates="trailers")
+    serial: Optional["Serial"] = Relationship(back_populates="trailers")
 
 
 class MovieBase(SQLModel):
@@ -119,7 +134,7 @@ class MovieBase(SQLModel):
     Movie Base Model for table Movie
     """
     title: str = Field(index=True)
-    type_: str
+    type_: str = Field(default="movie")
     description: str
     year: str
     duration: int
@@ -127,6 +142,7 @@ class MovieBase(SQLModel):
     is_persian: bool
     image_url: str
     cover_url: str
+    sent: bool = Field(default=False)
 
 
 class Movie(MovieBase, table=True):
@@ -140,34 +156,70 @@ class Movie(MovieBase, table=True):
     countries: List[Country] = Relationship(back_populates="movies", link_model=MovieCountryLink)
     actors: List[Actor] = Relationship(back_populates="movies", link_model=MovieActorLink)
 
+class SeasonBase(SQLModel):
+    title:str
+    
+class Season(SeasonBase, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    erial_id: int = Field(foreign_key="serial.id")
+    serial: "Serial" = Relationship(back_populates="seasons")
 
-# class NewsBase(SQLModel):
-#     title:str = Field(unique=True,index=True)
-#     type_:str | None
-#     content:str
-#     year:datetime | str
-#     # image:str = Field(unique=True,sa_column=Column(String(800)))
-#     # link:str = Field(unique=True,sa_column=Column(String(800)))
+class SerialBase(SQLModel):
+    """
+    Movie Base Model for table Movie
+    """
+    title: str = Field(index=True)
+    type_: str = Field(default='serie')
+    description: str
+    year: str
+    duration: int
+    imdb: float
+    is_persian: bool
+    image_url: str
+    cover_url: str
+    sent: bool = Field(default=False)
+    season_count: int
+    
+class Serial(SerialBase, table=True):
+    """
+    Movie Table with trailers,genres,countries and actors list 
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    
+    trailers: List[Trailer] = Relationship(back_populates="serial")  
+    genres: List[Genre] = Relationship(back_populates="serials", link_model=SerialGenreLink)
+    countries: List[Country] = Relationship(back_populates="serials", link_model=SerialCountryLink)
+    actors: List[Actor] = Relationship(back_populates="serials", link_model=SerialActorLink)
+    seasons: List[Season] = Relationship(back_populates="serial")
 
-
-# class News(NewsBase,table=True):
-#     id: Optional[int] = Field(default=None, primary_key=True)
-
+class SerialEpisodeBase(SQLModel):
+    """
+    Movie Base Model for table Movie
+    """
+    title: str = Field(index=True)
+    description: str
+    duration: int
+    season : Optional[int] = Field(default=None, foreign_key="season.id")
+    serial_id : Optional[int] = Field(default=None, foreign_key="serial.id")
+    sent: bool = Field(default=False)
+    season_obj: Optional[Season] = Relationship()
+    serial: Optional[Serial] = Relationship()
+    
+class SerialEpisode(SerialEpisodeBase, table=True):
+    """
+    Movie Table with trailers,genres,countries and actors list 
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    
 
 class PostBase(SQLModel):
     title:str = Field(unique=True)
     type_:str
-    summery:str
-
+    summary:str
     schedule:datetime | None
-
     image:str
-    trailer:str|None
-
-    use_trailer : bool
-    
     link : str | None
-    # tags : Optional[List[str]] | None
+    sent: bool = Field(default=False)
 
 
 class Post(PostBase,table=True):

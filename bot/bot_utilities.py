@@ -1,9 +1,7 @@
-from telegram import Bot, InputMediaPhoto
-from telegram.constants import ParseMode
-from telegram.error import TelegramError
-import json
-from typing import Optional,List
 import logging
+from telegram import Bot
+from telegram.error import TelegramError
+from typing import Optional,List
 from html import escape
 
 logging.basicConfig(
@@ -92,54 +90,3 @@ class TelegramMessageSender:
         """Format message with Markdown"""
         return f"*📌 {title}*\n\n{content}"
     
-
-
-
-def load_data_from_json(file_path: str) -> List[dict]:
-    """Load message data from JSON file"""
-    with open(file_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-    
-    # Handle different JSON structures
-    if isinstance(data, dict) and 'articles' in data:
-        return data['articles']
-    elif isinstance(data, list):
-        return data
-    else:
-        return [data]
-
-
-def format_movie_message(movie_data: dict) -> dict:
-    """
-    Format movie data for Telegram message
-    
-    Args:
-        movie_data: Dict with movie information
-    
-    Returns:
-        dict: Formatted message with title, content, image_url
-    """
-    title = movie_data.get('title', 'Untitled')
-    
-    # Build content
-    content_parts = []
-    
-    if 'description' in movie_data:
-        content_parts.append(movie_data['description'])
-    
-    if 'author' in movie_data:
-        content_parts.append(f"\n👤 Author: {movie_data['author']}")
-    
-    if 'published_date' in movie_data:
-        content_parts.append(f"📅 Date: {movie_data['published_date']}")
-    
-    if 'source_url' in movie_data:
-        content_parts.append(f"\n🔗 Read more: {movie_data['source_url']}")
-    
-    content = '\n'.join(content_parts)
-    
-    return {
-        'title': title,
-        'content': content,
-        'image_url': movie_data.get('image_url')
-    }
