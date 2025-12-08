@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "apscheduler>=3.11.1",
     "beautifulsoup4>=4.14.3",
     "dotenv>=0.9.9",
     "feedparser>=6.0.12",

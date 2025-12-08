@@ -25,34 +25,39 @@ from sqlmodel import Session
 #         for news in NewsCRUD.get_all(session=session):      
 #                     post = PostBase(title=news.title,type_="movie",summery=news.content,schedule='',image=news.image,trailer=None,use_trailer=False)
 #                     PostCRUD.create(session,post)
-import datetime 
+import datetime
+from persian_nlp_tools.persian_text_summarizer import TextSummarizationPipeline 
 def write_post_list(detials):
     with Session(engine) as session:
         for d in detials:
                     if isinstance(d,str):
                         continue
+                    TextSummarization = TextSummarizationPipeline(d.get("content"),0.3)
+                    summary = TextSummarization.process_and_summarize()
                     post = PostBase(
 
-                        title=d.get("title"),type_='N/A',summery=d.get("content"),
-                        schedule=datetime.datetime.now(),image='N/A',trailer='N/A',use_trailer=False
+                        title=d.get("title"),type_='N/A',summery=summary,
+                        schedule=datetime.datetime.now(),image=d.get("image"),trailer='N/A',use_trailer=False,
+                        link=d.get("link")
                                     
                         )
                     PostCRUD.create(session,post)
 
 import json
+from bot.bot import run
 if __name__ == "__main__":
-    # run()
-    session = Client()
-    contianer = ScraperContianer()
-    create_db()
-    sc_list = ['moviemag',]
-    for sc in sc_list:
-        scraper = contianer.resolve(sc,session=session)
-        data = extract_data(scraper)
-        parsed_data_list = parser_data(scraper,data)
-        detials = scraper.detail_parser(parsed_data_list)
-        # write_news_list(detials)    
-        write_post_list(detials)
+    run()
+    # session = Client()
+    # contianer = ScraperContianer()
+    # create_db()
+    # sc_list = ['moviemag',]
+    # for sc in sc_list:
+    #     scraper = contianer.resolve(sc,session=session)
+    #     data = extract_data(scraper)
+    #     parsed_data_list = parser_data(scraper,data)
+    #     detials = scraper.detail_parser(parsed_data_list)
+    #     # write_news_list(detials)    
+    #     write_post_list(detials)
 
 
     # make_post()

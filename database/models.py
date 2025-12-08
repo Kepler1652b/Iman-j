@@ -166,7 +166,7 @@ class PostBase(SQLModel):
 
     use_trailer : bool
     
-    # links : List[str] | None
+    link : str | None
     # tags : Optional[List[str]] | None
 
 

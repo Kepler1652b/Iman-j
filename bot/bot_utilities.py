@@ -1,6 +1,16 @@
 from telegram import Bot, InputMediaPhoto
 from telegram.constants import ParseMode
 from telegram.error import TelegramError
+import json
+from typing import Optional,List
+import logging
+from html import escape
+
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
 
 class TelegramMessageSender:
@@ -22,6 +32,7 @@ class TelegramMessageSender:
         chat_id: str,
         title: str,
         content: str,
+        link:str,
         image_url: Optional[str] = None,
         parse_mode: str = "HTML"
     ) -> bool:
@@ -41,7 +52,7 @@ class TelegramMessageSender:
         try:
             # Format the message
             if parse_mode == "HTML":
-                message_text = self._format_html(title, content)
+                message_text = self._format_html(title, content,link)
             elif parse_mode == "Markdown":
                 message_text = self._format_markdown(title, content)
             else:
@@ -69,9 +80,13 @@ class TelegramMessageSender:
             logger.error(f"Failed to send message: {e}")
             return False
     
-    def _format_html(self, title: str, content: str) -> str:
+    def _format_html(self, title: str, content: str,link:str) -> str:
         """Format message with HTML"""
-        return f"<b>📌 {title}</b>\n\n{content}"
+        link = escape(link)
+        link =f'<a href="{link}">لینک خبر</a>'
+        content = escape(content)
+        title = escape(title)
+        return f'<b>📌 {title}</b>\n\n{content}\n\n{link}\n\n @newsscrape کانال ما '
     
     def _format_markdown(self, title: str, content: str) -> str:
         """Format message with Markdown"""

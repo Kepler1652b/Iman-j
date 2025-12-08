@@ -125,5 +125,4 @@ class TextSummarizationPipeline:
         summary = summarizer.generate_summary()
 
         # Print the summary
-        print("Generated Summary:")
-        print(summary)
+        return summary
