@@ -32,7 +32,7 @@ def write_post_list(detials):
         for d in detials:
                     if isinstance(d,str):
                         continue
-                    TextSummarization = TextSummarizationPipeline(d.get("content"),0.3)
+                    TextSummarization = TextSummarizationPipeline(d.get("content"),0.3,3)
                     summary = TextSummarization.process_and_summarize()
                     post = PostBase(
 
@@ -46,18 +46,20 @@ def write_post_list(detials):
 import json
 from bot.bot import run
 if __name__ == "__main__":
-    run()
-    # session = Client()
-    # contianer = ScraperContianer()
-    # create_db()
-    # sc_list = ['moviemag',]
-    # for sc in sc_list:
-    #     scraper = contianer.resolve(sc,session=session)
-    #     data = extract_data(scraper)
-    #     parsed_data_list = parser_data(scraper,data)
-    #     detials = scraper.detail_parser(parsed_data_list)
-    #     # write_news_list(detials)    
-    #     write_post_list(detials)
+    option = int(input("1(bot)\n2(scrape)\n"))
+    if option == 1:
+        run()
+    elif option == 2:
+        session = Client()
+        contianer = ScraperContianer()
+        create_db()
+        for sc in contianer.scraper_map:
+            scraper = contianer.resolve(sc,session=session)
+            data = extract_data(scraper)
+            parsed_data_list = parser_data(scraper,data)
+            detials = scraper.detail_parser(parsed_data_list)
+            # write_news_list(detials)    
+            write_post_list(detials)
 
 
     # make_post()
