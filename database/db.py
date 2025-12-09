@@ -26,6 +26,10 @@ from .models import (
     MovieGenreLink,
     MovieCountryLink,
     MovieActorLink,Post,PostBase,
+    Serial,SerialBase,EpisodeBase,Episode,
+    SerialGenreLink,SerialActorLink,SerialCountryLink,
+    Season,SeasonBase
+
 )
 
 # Setup logging
@@ -787,65 +791,421 @@ class MovieCRUD:
 
 
 
-# class NewsCRUD:
-#     """
-#      Class for News CRUD actions
-#     """
-#     @staticmethod
-#     @handle_db_errors("Create news")
-#     def create(session: Session, news_data: NewsBase) -> News:
-        
-#         """Create a new news"""
-#         news = News.model_validate(news_data)
-#         session.add(news)
-#         session.commit()
-#         session.refresh(news)
-#         return news
-    
-#     @staticmethod
-#     @handle_db_errors("Get news by ID")
-#     def get_by_id(session: Session, news_id: int) -> Optional[News]:
-#         """
-#         Get news by ID
-#         returns None if News with id dose not exist
-#         """
-#         return session.get(News, news_id)
-    
-#     @staticmethod
-#     @handle_db_errors("Get all newses")
-#     def get_all(session: Session, skip: int = 0, limit: int = 100) -> List[News]:
-#         """Get all news with pagination"""
-#         statement = select(News).offset(skip).limit(limit)
-#         return list(session.exec(statement).all())
 
+
+
+
+
+
+
+
+# ============= SERIAL CRUD =============
+
+class SerialCRUD:
     
-#     @staticmethod
-#     @handle_db_errors("Update news by ID")
-#     def update(session: Session, news_id: int, news_data: dict) -> Optional[News]:
-#         """Update news"""
-#         news = session.get(News, news_id)
-#         if not news:
-#             return None
-        
-#         for key, value in news_data.items():
-#             setattr(news, key, value)
-        
-#         session.add(news)
-#         session.commit()
-#         session.refresh(news)
-#         return news
+    @staticmethod
+    @handle_db_errors("Create Serial")
+    def create(session: Session, serial_data: SerialBase) -> Serial:
+        """Create a new Serial"""
+        serial = Serial.model_validate(serial_data)
+        session.add(serial)
+        session.commit()
+        session.refresh(serial)
+        return serial
     
-#     @staticmethod
-#     @handle_db_errors("Delete news by ID")
-#     def delete(session: Session, news_id: int) -> bool:
-#         """Delete news"""
-#         news = session.get(News, news_id)
-#         if not news:
-#             return False
+    @staticmethod
+    @handle_db_errors("Get Serial by ID")
+    def get_by_id(session: Session, serial_id: int) -> Optional[Serial]:
+        """Get Serial by ID with all relationships"""
+        return session.get(Serial, serial_id)
+    
+    @staticmethod
+    @handle_db_errors("Get Serial by Title")
+    def get_by_title(session: Session, title: str) -> Optional[Serial]:
+        """Get Serial by title"""
+        statement = select(Serial).where(Serial.title == title)
+        return session.exec(statement).first()
+    
+    @staticmethod
+    @handle_db_errors("Get all Serials")
+    def get_all(session: Session, skip: int = 0, limit: int = 100) -> List[Serial]:
+        """Get all Serials with pagination"""
+        statement = select(Serial).offset(skip).limit(limit)
+        return list(session.exec(statement).all())
+    
+    @staticmethod
+    @handle_db_errors("Search Serial by Title")
+    def search_by_title(session: Session, title: str) -> List[Serial]:
+        """Search Serial by title (partial match)"""
+        statement = select(Serial).where(Serial.title.contains(title))
+        return list(session.exec(statement).all())
+    
+    @staticmethod
+    @handle_db_errors("Get Serial by genre ID")
+    def get_by_genre(session: Session, genre_id: int) -> List[Serial]:
+        """Get all Serials by genre's id"""
+        statement = select(Serial).join(SerialGenreLink).where(SerialGenreLink.genre_id == genre_id)
+        return list(session.exec(statement).all())
+    
+    @staticmethod
+    @handle_db_errors("Get Serial by genre title")
+    def get_by_genre_title(session: Session, genre_title: str):  
+        """Get all Serials by genre's title"""
+        from .db import GenreCRUD 
         
-#         session.delete(news)
-#         session.commit()
-#         return True
+        genre_result = GenreCRUD.get_by_title(session, genre_title)
+        if not genre_result.success or not genre_result.data:
+            raise ValueError(f"Genre '{genre_title}' not found")
+        
+        genre = genre_result.data
+        statement = select(Serial).join(SerialGenreLink).where(SerialGenreLink.genre_id == genre.id)
+        return list(session.exec(statement).all())
+    
+    @staticmethod
+    @handle_db_errors("Get Serial by Country ID")
+    def get_by_country(session: Session, country_id: int) -> List[Serial]:
+        """Get all Serials by country"""
+        statement = select(Serial).join(SerialCountryLink).where(SerialCountryLink.country_id == country_id)
+        return list(session.exec(statement).all())
+    
+    @staticmethod
+    @handle_db_errors("Get Serial by Country name")
+    def get_by_country_name(session: Session, country_name: str) -> List[Serial]:  
+        """Get all Serials by country's name"""
+        from .db import CountryCRUD
+        
+        country_result = CountryCRUD.get_by_title(session, country_name)
+        if not country_result.success or not country_result.data:
+            raise ValueError(f"Country '{country_name}' not found")
+        
+        country = country_result.data
+        statement = select(Serial).join(SerialCountryLink).where(SerialCountryLink.country_id == country.id)
+        return list(session.exec(statement).all())
+    
+    @staticmethod
+    @handle_db_errors("Get Serial by Actor ID")
+    def get_by_actor(session: Session, actor_id: int) -> List[Serial]:
+        """Get all Serials by actor"""
+        statement = select(Serial).join(SerialActorLink).where(SerialActorLink.actor_id == actor_id)
+        return list(session.exec(statement).all())
+    
+    @staticmethod
+    @handle_db_errors("Get Serial by Actor name")
+    def get_by_actor_name(session: Session, actor_name: str) -> List[Serial]:
+        """Get all Serials by actor name"""
+        from .db import ActorCRUD
+        
+        actor_result = ActorCRUD.get_by_name(session, actor_name)
+        if not actor_result.success or not actor_result.data:
+            raise ValueError(f"Actor '{actor_name}' not found")
+        
+        actor = actor_result.data
+        statement = select(Serial).join(SerialActorLink).where(SerialActorLink.actor_id == actor.id)
+        return list(session.exec(statement).all())
+    
+    @staticmethod
+    @handle_db_errors("Get Persian Serials")
+    def get_persian_serials(session: Session) -> List[Serial]:  
+        """Get all Persian Serials"""
+        statement = select(Serial).where(Serial.is_persian == True)
+        return list(session.exec(statement).all())
+    
+    @staticmethod
+    @handle_db_errors("Get Serial by year")
+    def get_by_year(session: Session, year: str) -> List[Serial]:
+        """Get Serials by year with (partial match)"""
+        statement = select(Serial).where(Serial.year.contains(year))
+        return list(session.exec(statement).all())
+    
+    @staticmethod
+    @handle_db_errors("Get Serial by IMDB rating")
+    def get_by_imdb_rating(session: Session, min_rating: float) -> List[Serial]:
+        """Get Serials with IMDB rating above threshold"""
+        statement = select(Serial).where(Serial.imdb >= min_rating)
+        return list(session.exec(statement).all())
+    
+    @staticmethod
+    @handle_db_errors("Update Serial by ID")
+    def update(session: Session, serial_id: int, serial_data: dict) -> Optional[Serial]:
+        """Update Serial"""
+        serial = session.get(Serial, serial_id)
+        if not serial:
+            raise ValueError(f"Serial with ID {serial_id} not found")
+        
+        for key, value in serial_data.items():
+            setattr(serial, key, value)
+        
+        session.add(serial)
+        session.commit()
+        session.refresh(serial)
+        return serial
+    
+    @staticmethod
+    @handle_db_errors("Delete serial by ID")
+    def delete(session: Session, serial_id: int) -> bool:
+        """Delete serial"""
+        serial = session.get(Serial, serial_id)
+        if not serial:
+            raise ValueError(f"Serial with ID {serial_id} not found")
+        
+        session.delete(serial)
+        session.commit()
+        return True
+    
+    # ===== Relationship Management =====
+    
+    @staticmethod
+    @handle_db_errors("Add genre to serial")
+    def add_genre(session: Session, serial_id: int, genre_id: int) -> bool:
+        """Add a genre to a serial"""
+        link = SerialGenreLink(serial_id=serial_id, genre_id=genre_id)
+        session.add(link)
+        session.commit()
+        return True
+    
+    @staticmethod
+    @handle_db_errors("Remove genre from serial")
+    def remove_genre(session: Session, serial_id: int, genre_id: int) -> bool:
+        """Remove a genre from a serial"""
+        statement = select(SerialGenreLink).where(
+            SerialGenreLink.serial_id == serial_id,
+            SerialGenreLink.genre_id == genre_id
+        )
+        link = session.exec(statement).first()
+        if not link:
+            raise ValueError("Genre-Serial link not found")
+        
+        session.delete(link)
+        session.commit()
+        return True
+    
+    @staticmethod
+    @handle_db_errors("Add country to serial")
+    def add_country(session: Session, serial_id: int, country_id: int) -> bool:
+        """Add a country to a serial"""
+        link = SerialCountryLink(serial_id=serial_id, country_id=country_id)
+        session.add(link)
+        session.commit()
+        return True
+    
+    @staticmethod
+    @handle_db_errors("Remove country from serial")
+    def remove_country(session: Session, serial_id: int, country_id: int) -> bool:
+        """Remove a country from a serial"""
+        statement = select(SerialCountryLink).where(
+            SerialCountryLink.serial_id == serial_id,
+            SerialCountryLink.country_id == country_id
+        )
+        link = session.exec(statement).first()
+        if not link:
+            raise ValueError("Country-Serial link not found")
+        
+        session.delete(link)
+        session.commit()
+        return True
+    
+    @staticmethod
+    @handle_db_errors("Add actor to serial")
+    def add_actor(session: Session, serial_id: int, actor_id: int) -> bool:
+        """Add an actor to a serial"""
+        link = SerialActorLink(serial_id=serial_id, actor_id=actor_id)
+        session.add(link)
+        session.commit()
+        return True
+    
+    @staticmethod
+    @handle_db_errors("Remove actor from serial")
+    def remove_actor(session: Session, serial_id: int, actor_id: int) -> bool:
+        """Remove an actor from a serial"""
+        statement = select(SerialActorLink).where(
+            SerialActorLink.serial_id == serial_id,
+            SerialActorLink.actor_id == actor_id
+        )
+        link = session.exec(statement).first()
+        if not link:
+            raise ValueError("Actor-Serial link not found")
+        
+        session.delete(link)
+        session.commit()
+        return True
+
+
+# ============= EPISODE CRUD =============
+
+class EpisodeCRUD:
+    
+    @staticmethod
+    @handle_db_errors("Create Episode")
+    def create(session: Session, episode_data: EpisodeBase) -> Episode: 
+        """Create a new episode"""
+        episode = Episode.model_validate(episode_data)
+        session.add(episode)
+        session.commit()
+        session.refresh(episode)
+        return episode
+    
+    @staticmethod
+    @handle_db_errors("Get Episode by ID")
+    def get_by_id(session: Session, episode_id: int) -> Optional[Episode]:
+        """Get episode by ID with all relationships"""
+        return session.get(Episode, episode_id)
+    
+    @staticmethod
+    @handle_db_errors("Get Episode by Title")
+    def get_by_title(session: Session, title: str) -> Optional[Episode]:
+        """Get Episode by title"""
+        statement = select(Episode).where(Episode.title == title)
+        return session.exec(statement).first()
+    
+    @staticmethod
+    @handle_db_errors("Get all Episodes")
+    def get_all(session: Session, skip: int = 0, limit: int = 100) -> List[Episode]:
+        """Get all Episodes with pagination"""
+        statement = select(Episode).offset(skip).limit(limit)
+        return list(session.exec(statement).all())
+    
+    @staticmethod
+    @handle_db_errors("Search Episode by Title")
+    def search_by_title(session: Session, title: str) -> List[Episode]:
+        """Search Episode by title (partial match)"""
+        statement = select(Episode).where(Episode.title.contains(title))
+        return list(session.exec(statement).all())
+    
+    @staticmethod
+    @handle_db_errors("Get Episodes by Serial ID")
+    def get_by_serial_id(session: Session, serial_id: int) -> List[Episode]:
+        """Get all episodes for a serial"""
+        statement = select(Episode).where(Episode.serial_id == serial_id)
+        return list(session.exec(statement).all())
+    
+    @staticmethod
+    @handle_db_errors("Get Episodes by Season ID")
+    def get_by_season_id(session: Session, season_id: int) -> List[Episode]:
+        """Get all episodes for a season"""
+        statement = select(Episode).where(Episode.season_id == season_id)
+        return list(session.exec(statement).all())
+    
+    @staticmethod
+    @handle_db_errors("Get Episode by number")
+    def get_by_episode_number(session: Session, serial_id: int, season_id: int, episode_number: int) -> Optional[Episode]:
+        """Get specific episode by serial, season, and episode number"""
+        statement = select(Episode).where(
+            Episode.serial_id == serial_id,
+            Episode.season_id == season_id,
+            Episode.episode_number == episode_number
+        )
+        return session.exec(statement).first()
+    
+    @staticmethod
+    @handle_db_errors("Update Episode by ID")
+    def update(session: Session, episode_id: int, episode_data: dict) -> Optional[Episode]:
+        """Update Episode"""
+        episode = session.get(Episode, episode_id)
+        if not episode:
+            raise ValueError(f"Episode with ID {episode_id} not found")
+        
+        for key, value in episode_data.items():
+            setattr(episode, key, value)
+        
+        session.add(episode)
+        session.commit()
+        session.refresh(episode)
+        return episode
+    
+    @staticmethod
+    @handle_db_errors("Delete Episode by ID")
+    def delete(session: Session, episode_id: int) -> bool:
+        """Delete Episode"""
+        episode = session.get(Episode, episode_id)
+        if not episode:
+            raise ValueError(f"Episode with ID {episode_id} not found")
+        
+        session.delete(episode)
+        session.commit()
+        return True
+
+
+# ============= SEASON CRUD =============
+
+class SeasonCRUD:
+    """CRUD operations for Season"""
+    
+    @staticmethod
+    @handle_db_errors("Create Season")
+    def create(session: Session, season_data: SeasonBase, serial_id: int) -> Season:
+        """Create a new season"""
+        season = Season.model_validate(season_data)
+        season.serial_id = serial_id
+        session.add(season)
+        session.commit()
+        session.refresh(season)
+        return season
+    
+    @staticmethod
+    @handle_db_errors("Get Season by ID")
+    def get_by_id(session: Session, season_id: int) -> Optional[Season]:
+        """Get season by ID"""
+        return session.get(Season, season_id)
+    
+    @staticmethod
+    @handle_db_errors("Get Seasons by Serial ID")
+    def get_by_serial_id(session: Session, serial_id: int) -> List[Season]:
+        """Get all seasons for a serial"""
+        statement = select(Season).where(Season.serial_id == serial_id)
+        return list(session.exec(statement).all())
+    
+    @staticmethod
+    @handle_db_errors("Get Season by number")
+    def get_by_season_number(session: Session, serial_id: int, season_number: int) -> Optional[Season]:
+        """Get specific season by serial and season number"""
+        statement = select(Season).where(
+            Season.serial_id == serial_id,
+            Season.season_number == season_number
+        )
+        return session.exec(statement).first()
+    
+    @staticmethod
+    @handle_db_errors("Update Season")
+    def update(session: Session, season_id: int, season_data: dict) -> Optional[Season]:
+        """Update Season"""
+        season = session.get(Season, season_id)
+        if not season:
+            raise ValueError(f"Season with ID {season_id} not found")
+        
+        for key, value in season_data.items():
+            setattr(season, key, value)
+        
+        session.add(season)
+        session.commit()
+        session.refresh(season)
+        return season
+    
+    @staticmethod
+    @handle_db_errors("Delete Season")
+    def delete(session: Session, season_id: int) -> bool:
+        """Delete Season and all its episodes"""
+        season = session.get(Season, season_id)
+        if not season:
+            raise ValueError(f"Season with ID {season_id} not found")
+        
+        # Delete all episodes in this season first
+        statement = select(Episode).where(Episode.season_id == season_id)
+        episodes = session.exec(statement).all()
+        for episode in episodes:
+            session.delete(episode)
+        
+        # Delete the season
+        session.delete(season)
+        session.commit()
+        return True
+
+
+
+
+
+
+
+
 
 class PostCRUD:
     """

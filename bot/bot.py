@@ -13,6 +13,7 @@ from .bot_utilities import TelegramMessageSender
 from database.db import PostCRUD,engine
 from .config_loader import ADMINS,TOKEN,CHANNEL_ID
 from sqlmodel import Session
+from datetime import time, timezone, timedelta
 from telegram.ext import Application, CommandHandler, ContextTypes
 from telegram import Update
 from telegram.ext import (
@@ -29,7 +30,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 skip = 0
-
+IRAN_TZ = timezone(timedelta(hours=3, minutes=30))
 
 class LayoutContianer:
     def __init__(self):
@@ -97,14 +98,15 @@ def run():
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", cmd_start))
 
-    app.job_queue.run_repeating(
+    app.job_queue.run_daily(
         callback=send_with_limit,
-        data={'limit':5},
-        interval=50,  # seconds
-        first=10  # wait 10 seconds before first run
+        time=time(hour=17, minute=0, second=0, tzinfo=IRAN_TZ),
+        data={'limit': 5},
+        name='daily_5pm_job'
     )
-    
-    logger.info("✅ Job scheduled - will run every 60 seconds")
+
+
+    logger.info("✅ Scheduled: Daily at 5:00 PM Iran time (UTC+3:30)")
     print("🚀 Bot started.")
     app.run_polling()
 

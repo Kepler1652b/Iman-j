@@ -53,13 +53,13 @@ if __name__ == "__main__":
         session = Client()
         contianer = ScraperContianer()
         create_db()
-        # for sc in contianer.scraper_map:
-        #     scraper = contianer.resolve(sc,session=session)
-        #     data = extract_data(scraper)
-        #     parsed_data_list = parser_data(scraper,data)
-        #     detials = scraper.detail_parser(parsed_data_list)
-        #     # write_news_list(detials)    
-        #     write_post_list(detials)
+        for sc in contianer.scraper_map:
+            scraper = contianer.resolve(sc,session=session)
+            data = extract_data(scraper)
+            parsed_data_list = parser_data(scraper,data)
+            detials = scraper.detail_parser(parsed_data_list)
+            # write_news_list(detials)    
+            write_post_list(detials)
 
 
     # make_post()
