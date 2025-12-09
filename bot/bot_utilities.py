@@ -3,6 +3,8 @@ from telegram import Bot
 from telegram.error import TelegramError
 from typing import Optional,List
 from html import escape
+import httpx
+from .config_loader import CHANNEL_ID
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -90,3 +92,100 @@ class TelegramMessageSender:
         """Format message with Markdown"""
         return f"*📌 {title}*\n\n{content}"
     
+
+
+
+
+
+
+
+# Fetch data from the API
+def fetch_data_from_api(endpoint):
+    try:
+        response = httpx.get(endpoint)
+        response.raise_for_status()  # Check if the request was successful
+        return response.json()  # Returns the response as a JSON object
+    except httpx.exceptions.RequestException as e:
+        logger.error(f"Error fetching data: {e}")
+        return None
+
+# Format movie data to send as Telegram message
+def format_movie_message(data):
+    if data["type"] == "movie":
+        message = f"<b>{data['title']}</b>\n\n"  # Title in bold
+        message += f"📅 <i>سال:</i> {data['year']}\n"
+        message += f"🕒 <i>مدت زمان:</i> {data['duration']}\n"
+        message += f"⭐ <i>امتیاز IMDB:</i> {data['imdb']}\n"
+        message += f"📍 <i>کشور:</i> {data['countries'][0]['title']}\n"
+        message += f"🎭 <i>بازیگران:</i> {', '.join([actor['name'] for actor in data['actors']])}\n"
+        message += f"📝 <i>توضیحات:</i> {data['description']}\n"
+        
+        # Add trailer if available
+        trailer_url = data.get("trailer", {}).get("url", None)
+        if trailer_url:
+            message += f"🎬 <a href='{trailer_url}'>تماشای تریلر</a>\n"
+        
+        # Add channel username at the end
+        message += f"\n\n🔗 {CHANNEL_ID}"
+        
+        return message
+    return "داده ای برای ارسال وجود ندارد."
+
+# Format series data to send as Telegram message
+def format_series_message(data):
+    if data["type"] == "serie":
+        message = f"<b>{data['title']}</b>\n\n"  # Title in bold
+        message += f"📅 <i>سال:</i> {data['year']}\n"
+        message += f"🕒 <i>مدت زمان:</i> {data['duration']}\n"
+        message += f"⭐ <i>امتیاز IMDB:</i> {data['imdb']}\n"
+        message += f"📍 <i>کشور:</i> {data['countries'][0]['title']}\n"
+        message += f"🎭 <i>بازیگران:</i> {', '.join([actor['name'] for actor in data['actors']])}\n"
+        message += f"📝 <i>توضیحات:</i> {data['description']}\n"
+        
+        # Add season count for series
+        message += f"📺 <i>فصل ها:</i> {data.get('season_count', 'N/A')}\n"
+        
+        # Add trailer if available
+        trailer_url = data.get("trailer", {}).get("url", None)
+        if trailer_url:
+            message += f"🎬 <a href='{trailer_url}'>تماشای تریلر</a>\n"
+        
+        # Add channel username at the end
+        message += f"\n\n🔗 {CHANNEL_ID}"
+        
+        return message
+    return "داده ای برای ارسال وجود ندارد."
+
+# Format episode data to send as Telegram message
+def format_episode_message(data):
+    # Check if 'episode' exists in the data
+    if "episode" in data:
+        # Begin constructing the message
+        message = f"<b>{data['title']}</b>\n\n"
+        message += f"📅 <i>سال:</i> {data['year']}\n"
+        message += f"🕒 <i>مدت زمان:</i> {data['duration']}\n"
+        message += f"⭐ <i>امتیاز IMDB:</i> {data['imdb']}\n"
+        message += f"📍 <i>کشور:</i> {data['countries'][0]['title']}\n"
+        
+        # Add actors
+        message += f"🎭 <i>بازیگران:</i> {', '.join([actor['name'] for actor in data['actors']])}\n"
+        
+        # Add description
+        message += f"📝 <i>توضیحات:</i> {data['description']}\n"
+        
+        # Add episode specific info
+        episode = data["episode"]
+        message += f"🎬 <i>قسمت:</i> {episode['title']}\n"
+        message += f"📝 <i>توضیحات قسمت:</i> {episode['description']}\n"
+        message += f"📺 <i>فصل:</i> {episode['season']['title']}\n"
+        
+        # Add trailer link
+        trailer_url = data.get("trailer", {}).get("url", None)
+        if trailer_url:
+            message += f"🎬 <a href='{trailer_url}'>تماشای تریلر</a>\n"
+        
+        # Add channel link
+        message += f"\n\n🔗 {CHANNEL_ID}"
+
+        return message
+    return "داده ای برای ارسال وجود ندارد."
