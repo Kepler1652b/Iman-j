@@ -77,8 +77,8 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-TOKEN = "7322296332:AAH8sHGUv11XS_Ka7TceRYSbddibAfaumsA"
-CHANNEL_ID = "-1003281525466"
+TOKEN = "8001927972:AAFMgUbtKlGUle7Z0N_g_qTLoxZ1LC5luUs"
+CHANNEL_ID = "-1003247699230"
 
 # async def send_ltp(context: ContextTypes.DEFAULT_TYPE):
 #     """Send LTP to channel"""
