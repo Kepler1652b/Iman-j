@@ -161,12 +161,12 @@ class Movie(MovieBase, table=True):
 class SeasonBase(SQLModel):
     """Season Base Model"""
     title: str = Field(max_length=200)
-    season_number: int 
-
+    api_id : int
+    serial_id: int = Field(foreign_key="serial.id", ondelete="CASCADE")  
 
 class Season(SeasonBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    serial_id: int = Field(foreign_key="serial.id", ondelete="CASCADE")  
+
     serial: "Serial" = Relationship(back_populates="seasons")
     episodes: List["Episode"] = Relationship(
         back_populates="season_obj",
@@ -228,11 +228,11 @@ class EpisodeBase(SQLModel):
     """Serial Episode Base Model"""
     title: str = Field(index=True, max_length=300)
     description: str = Field(sa_column=Column(Text))
-    duration: int
-    episode_number: int
+    duration: str
     season_id: Optional[int] = Field(default=None, foreign_key="season.id", ondelete="CASCADE")
     serial_id: Optional[int] = Field(default=None, foreign_key="serial.id", ondelete="CASCADE")
     sent: bool = Field(default=False)
+    api_id : int 
 
 
 class Episode(EpisodeBase, table=True):

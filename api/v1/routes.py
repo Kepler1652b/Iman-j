@@ -55,6 +55,47 @@ class Movie(BaseModel):
 
 
 
+class Episode(BaseModel):
+    """Movie Base Model for table Movie"""
+    title: str 
+    id : int
+    type: str 
+    description: str 
+    duration: str
+    year:int
+    imdb: float
+    persian: bool
+    image: str
+    cover: str 
+    trailer: Dict[str,Any]
+    genres: List[Dict[str,Any]] 
+    countries: List[Dict[str,Any]] 
+    actors: List[Dict[str,Any]]
+    season_count : int
+    episode : Dict[str,Any]
+
+
+
+class Serial(BaseModel):
+    """Movie Base Model for table Movie"""
+    title: str 
+    id : int
+    type: str 
+    description: str 
+    duration: str
+    year:int
+    imdb: float
+    persian: bool
+    image: str
+    cover: str 
+    trailer: Dict[str,Any]
+    genres: List[Dict[str,Any]] 
+    countries: List[Dict[str,Any]] 
+    actors: List[Dict[str,Any]]
+    season_count : int
+
+
+
 @router.post('/movie')
 async def create(movie_json:Movie):
     movie = MovieBase(
@@ -166,23 +207,110 @@ async def delete(api_id:int):
 
 
 
-class Serial(BaseModel):
-    """Movie Base Model for table Movie"""
-    title: str 
-    id : int
-    type: str 
-    description: str 
-    duration: str
-    year:int
-    imdb: float
-    persian: bool
-    image: str
-    cover: str 
-    trailer: Dict[str,Any]
-    genres: List[Dict[str,Any]] 
-    countries: List[Dict[str,Any]] 
-    actors: List[Dict[str,Any]]
-    season_count : int
+
+
+
+
+
+
+
+
+
+
+@router.post('/episode')
+async def create(serial_json:Episode):
+    episode = serial_json.episode
+    season = episode.get("season")
+    
+
+
+    with Session(engine) as session:
+
+
+        serial = SerialCRUD.get_by_api_id(session,serial_json.id)
+        if serial.data != None:
+            seasonObj = SeasonBase(
+                title=season.get("title"),
+                api_id=season.get("id"),
+                serial_id = serial.data.id
+            )
+            season = SeasonCRUD.get_by_api_id(session,season.get("id"))
+            if season.data == None:
+                season = SeasonCRUD.create(session=session,season_data=seasonObj)
+                session.refresh(season.data)
+
+            episodeBase = EpisodeBase(
+                title = episode.get("title"),
+                description = episode.get("description"),
+                duration = episode.get("duration"),
+                season_id = season.data.id,
+                serial_id = serial.data.id,
+                api_id = episode.get("id")
+            )
+
+            EpisodeObj= EpisodeCRUD.get_by_api_id(session,episode.get('id'))
+
+            if EpisodeObj.data == None:
+                episode_c = EpisodeCRUD.create(session,episodeBase)
+                session.refresh(episode_c.data)
+
+
+                return {"Created":episode.get('title')}
+            
+            return {f"This movie {EpisodeObj.data.title}":"already exist"}
+        return "NO serial with this id exist"
+
+
+# @router.patch('/episode/{api_id}')
+# async def update(api_id:int,serial_json:Episode):
+#     episode = serial_json.episode
+#     season = episode.get("season")
+
+
+#     with Session(engine) as session:
+
+#         SerialObj= EpisodeCRUD.get_by_api_id(session,api_id)
+#         episodeBase = EpisodeBase(
+#                 title = episode.get("title"),
+#                 description = episode.get("description"),
+#                 duration = episode.get("duration"),
+#                 season_id = 34,
+#                 serial_id = serial.data.id,
+#                 api_id = episode.get("id")
+#             )
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#         if SerialObj.data != None:
+#             serial = EpisodeCRUD.update(session,SerialObj.data.id,episodeBase.model_dump())
+#             return {f"This movie '{SerialObj.data.title}'":"Updated "}
+#         return "No episdoe with this id"
+
+
+
+@router.delete('/episode/{api_id}')
+async def delete(api_id:int):
+    with Session(engine) as session:
+        SerialObj= EpisodeCRUD.get_by_api_id(session,api_id)
+        if SerialObj.data != None:
+            SerialCRUD.delete(session,SerialObj.data.id)
+            return True
+        return False
+        
+
 
 
 

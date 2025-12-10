@@ -1066,6 +1066,15 @@ class EpisodeCRUD:
         """Get episode by ID with all relationships"""
         return session.get(Episode, episode_id)
     
+
+    @staticmethod
+    @handle_db_errors("Get Episode by ID")
+    def get_by_api_id(session: Session, episode_api_id: int) -> Optional[Episode]:
+        """Get episode by ID with all relationships"""
+        statement = select(Episode).where(Episode.api_id == episode_api_id)
+        return session.exec(statement).first()
+    
+
     @staticmethod
     @handle_db_errors("Get Episode by Title")
     def get_by_title(session: Session, title: str) -> Optional[Episode]:
@@ -1148,10 +1157,9 @@ class SeasonCRUD:
     
     @staticmethod
     @handle_db_errors("Create Season")
-    def create(session: Session, season_data: SeasonBase, serial_id: int) -> Season:
+    def create(session: Session, season_data: SeasonBase) -> Season:
         """Create a new season"""
         season = Season.model_validate(season_data)
-        season.serial_id = serial_id
         session.add(season)
         session.commit()
         session.refresh(season)
@@ -1163,6 +1171,15 @@ class SeasonCRUD:
         """Get season by ID"""
         return session.get(Season, season_id)
     
+
+    @staticmethod
+    @handle_db_errors("Get Season by ID")
+    def get_by_api_id(session: Session, season_api_id: int) -> Optional[Season]:
+        """Get season by Api ID"""
+        statement = select(Season).where(Season.api_id == season_api_id)
+        return list(session.exec(statement).first())
+    
+
     @staticmethod
     @handle_db_errors("Get Seasons by Serial ID")
     def get_by_serial_id(session: Session, serial_id: int) -> List[Season]:
