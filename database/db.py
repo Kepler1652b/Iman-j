@@ -1177,7 +1177,7 @@ class SeasonCRUD:
     def get_by_api_id(session: Session, season_api_id: int) -> Optional[Season]:
         """Get season by Api ID"""
         statement = select(Season).where(Season.api_id == season_api_id)
-        return list(session.exec(statement).first())
+        return session.exec(statement).first()
     
 
     @staticmethod

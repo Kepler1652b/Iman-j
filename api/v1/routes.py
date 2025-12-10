@@ -26,13 +26,6 @@ from database.models import (
 
 
 
-
-
-
-
-
-
-
 router  = APIRouter(prefix='/v1')
 
 class Movie(BaseModel):
@@ -162,7 +155,6 @@ async def create(movie_json:Movie):
         return {f"This movie {movieObj.data.title}":"already exist"}
     
 
-
 @router.patch('/movie/{api_id}')
 async def update(api_id:int,movie_json:Movie):
 
@@ -187,7 +179,6 @@ async def update(api_id:int,movie_json:Movie):
         return "No movie with this id"
 
 
-
 @router.delete('/movie/{api_id}')
 async def delete(api_id:int):
     with Session(engine) as session:
@@ -197,25 +188,6 @@ async def delete(api_id:int):
             return True
         return False
         
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 @router.post('/episode')
 async def create(serial_json:Episode):
@@ -261,43 +233,36 @@ async def create(serial_json:Episode):
         return "NO serial with this id exist"
 
 
-# @router.patch('/episode/{api_id}')
-# async def update(api_id:int,serial_json:Episode):
-#     episode = serial_json.episode
-#     season = episode.get("season")
+@router.patch('/episode/{api_id}')
+async def update(api_id:int,serial_json:Episode):
+    episode = serial_json.episode
+    season_json = episode.get("season")
 
 
-#     with Session(engine) as session:
-
-#         SerialObj= EpisodeCRUD.get_by_api_id(session,api_id)
-#         episodeBase = EpisodeBase(
-#                 title = episode.get("title"),
-#                 description = episode.get("description"),
-#                 duration = episode.get("duration"),
-#                 season_id = 34,
-#                 serial_id = serial.data.id,
-#                 api_id = episode.get("id")
-#             )
+    with Session(engine) as session:
         
+        SerialObj= EpisodeCRUD.get_by_api_id(session,api_id)
+        serial = SerialCRUD.get_by_api_id(session,serial_json.id)
+        season = SeasonCRUD.get_by_api_id(session,season_json.get("id"))
+        SeasonObj = SeasonBase(title=season_json.get('title'),api_id=season_json.get('id'),serial_id=serial.data.id)
+        if season.data != None:
+            season = SeasonCRUD.update(session,season.data.id,SeasonObj.model_dump())
+        else:
+            season = SeasonCRUD.create(session,SeasonObj)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#         if SerialObj.data != None:
-#             serial = EpisodeCRUD.update(session,SerialObj.data.id,episodeBase.model_dump())
-#             return {f"This movie '{SerialObj.data.title}'":"Updated "}
-#         return "No episdoe with this id"
+        episodeBase = EpisodeBase(
+                title = episode.get("title"),
+                description = episode.get("description"),
+                duration = episode.get("duration"),
+                season_id = season.data.id,
+                serial_id = serial.data.id,
+                api_id = episode.get("id")
+            )
+        
+        if SerialObj.data != None:
+            serial = EpisodeCRUD.update(session,SerialObj.data.id,episodeBase.model_dump())
+            return {f"This movie '{SerialObj.data.title}'":"Updated "}
+        return "No episdoe with this id"
 
 
 
@@ -310,8 +275,6 @@ async def delete(api_id:int):
             return True
         return False
         
-
-
 
 
 
