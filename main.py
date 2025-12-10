@@ -32,11 +32,13 @@ def write_post_list(detials):
         for d in detials:
                     if isinstance(d,str):
                         continue
+                    if d.get("content") == None:
+                         continue
                     TextSummarization = TextSummarizationPipeline(d.get("content"),0.3,3)
                     summary = TextSummarization.process_and_summarize()
                     post = PostBase(
 
-                        title=d.get("title"),type_='N/A',summery=summary,
+                        title=d.get("title"),type_='N/A',summary=summary,
                         schedule=datetime.datetime.now(),image=d.get("image"),trailer='N/A',use_trailer=False,
                         link=d.get("link")
                                     
@@ -44,6 +46,7 @@ def write_post_list(detials):
                     PostCRUD.create(session,post)
 
 import json
+
 from bot.bot import run
 if __name__ == "__main__":
     option = int(input("1(bot)\n2(scrape)\n"))

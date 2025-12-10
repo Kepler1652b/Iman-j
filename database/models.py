@@ -215,7 +215,7 @@ class PostBase(SQLModel):
     """Post Base Model"""
     title: str = Field(unique=True, max_length=300)
     type_: str = Field(max_length=50)
-    summary: str = Field(sa_column=Column(Text)) 
+    summary: str 
     schedule: Optional[datetime] = Field(default=None)
     image: str = Field(max_length=500)
     link: Optional[str] = Field(default=None, max_length=500) 
