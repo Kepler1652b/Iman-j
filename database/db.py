@@ -490,10 +490,11 @@ class TrailerCRUD:
     
     @staticmethod
     @handle_db_errors("Create trailer")
-    def create(session: Session, trailer_data: TrailerBase, movie_id: int) -> Trailer:
+    def create(session: Session, trailer_data: TrailerBase, movie_id: int = None, serial_id: int=None) -> Trailer:
         """Create a new trailer"""
         trailer = Trailer.model_validate(trailer_data)
         trailer.movie_id = movie_id
+        trailer.serial_id = serial_id
         session.add(trailer)
         session.commit()
         session.refresh(trailer)
@@ -570,6 +571,12 @@ class MovieCRUD:
         """Get movie by ID with all relationships"""
         return session.get(Movie, movie_id)
     
+    @staticmethod
+    @handle_db_errors("Get movie by api ID")
+    def get_by_api_id(session: Session, movie_api_id: int) -> Optional[Movie]:
+        """Get movie by ID with all relationships"""
+        statement = select(Movie).where(Movie.api_id == movie_api_id)
+        return session.exec(statement).first()
 
     @staticmethod
     @handle_db_errors("Get movie by Title")
@@ -819,6 +826,15 @@ class SerialCRUD:
         """Get Serial by ID with all relationships"""
         return session.get(Serial, serial_id)
     
+    @staticmethod
+    @handle_db_errors("Get Serial by ID")
+    def get_by_api_id(session: Session, serial_api_id: int) -> Optional[Serial]:
+        """Get Serial by ID with all relationships"""
+        statement = select(Serial).where(Serial.api_id == serial_api_id)
+        return session.exec(statement).first()
+    
+    
+
     @staticmethod
     @handle_db_errors("Get Serial by Title")
     def get_by_title(session: Session, title: str) -> Optional[Serial]:
