@@ -122,11 +122,11 @@ class Trailer(TrailerBase, table=True):
 
 class MovieBase(SQLModel):
     """Movie Base Model for table Movie"""
-    title: str = Field(index=True, max_length=300)
+    title: str = Field(unique=True, index=True, max_length=300)
     type_: str = Field(default="movie", max_length=50)
     description: str = Field(sa_column=Column(Text)) 
-    year: str = Field(max_length=10)
-    duration: int
+    year: int
+    duration: str
     imdb: float
     is_persian: bool
     image_url: str = Field(max_length=500)
