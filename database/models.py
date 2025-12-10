@@ -162,7 +162,7 @@ class SeasonBase(SQLModel):
     """Season Base Model"""
     title: str = Field(max_length=200)
     api_id : int
-    serial_id: int = Field(foreign_key="serial.id", ondelete="CASCADE")  
+    serial_id: int = Field(foreign_key="serial.id")  
 
 class Season(SeasonBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -229,8 +229,8 @@ class EpisodeBase(SQLModel):
     title: str = Field(index=True, max_length=300)
     description: str = Field(sa_column=Column(Text))
     duration: str
-    season_id: Optional[int] = Field(default=None, foreign_key="season.id", ondelete="CASCADE")
-    serial_id: Optional[int] = Field(default=None, foreign_key="serial.id", ondelete="CASCADE")
+    season_id: Optional[int] = Field(default=None, foreign_key="season.id")
+    serial_id: Optional[int] = Field(default=None, foreign_key="serial.id")
     sent: bool = Field(default=False)
     api_id : int 
 
