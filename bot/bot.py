@@ -1,7 +1,7 @@
 """
 Telegram Bot for sending formatted messages with images
 Supports direct messages and channel posts.
-Fully dynamic: handles any new fields in the database.
+Prettified messages in Persian for users.
 """
 
 import logging
@@ -17,7 +17,7 @@ from bot.config_loader import ADMINS, TOKEN, CHANNEL_ID
 from bot.templats.admin import AdminLayout
 from bot.templats.base import Layout
 from bot.bot_utilities import TelegramMessageSender
-from database.models import Episode  
+from database.models import Episode
 
 # ------------------ Logging ------------------
 logging.basicConfig(
@@ -46,12 +46,23 @@ class LayoutContainer:
 # ------------------ Dynamic Telegram Message ------------------
 async def send_to_telegram(data: dict, bot, chat_id: int):
     """
-    Dynamically send any data (movie, serial, episode) as a Telegram message.
-    Uses episode's parent serial image if episode has no image.
+    Send any item (movie, serial, episode) as a Telegram message.
+    Prettified with Persian labels.
+    Uses parent serial image for episodes if no image.
     """
     if not data:
         logger.warning("No data to send")
         return
+
+    # Fields to show in Persian
+    FIELD_MAP = {
+        "description": "توضیحات",
+        "duration": "مدت زمان",
+        "year": "سال",
+        "imdb": "امتیاز IMDB",
+        "is_persian": "فارسی",
+        "season_count": "تعداد فصل‌ها",
+    }
 
     lines = []
 
@@ -59,32 +70,27 @@ async def send_to_telegram(data: dict, bot, chat_id: int):
     title = data.get("title") or data.get("name") or "بدون عنوان"
     lines.append(f"<b>📌 {title}</b>")
 
-    # Dynamic fields
-    for key, value in data.items():
-        if key in ["title", "name", "image_url", "cover_url", "sent", "type", "type_"]:
-            continue
-        if value is None:
-            continue
-        # Format booleans
-        if isinstance(value, bool):
-            value = "✅" if value else "❌"
-        # Format lists of dicts
-        elif isinstance(value, list) and all(isinstance(v, dict) for v in value):
-            if all("name" in v for v in value):
-                value = ", ".join(v["name"] for v in value)
-            elif all("title" in v for v in value):
-                value = ", ".join(v["title"] for v in value)
-        display_key = key.replace("_", " ").capitalize()
-        lines.append(f"• {display_key}: {value}")
+    # If episode, include serial name
+    if data.get("season_id") and "serial" in data:
+        serial_name = data["serial"].get("title") or data["serial"].get("name")
+        if serial_name:
+            lines.append(f"• سریال: {serial_name}")
+
+    # Add fields
+    for key, persian_label in FIELD_MAP.items():
+        if key in data and data[key] is not None:
+            value = data[key]
+            if isinstance(value, bool):
+                value = "✅" if value else "❌"
+            lines.append(f"• {persian_label}: {value}")
 
     message = "\n".join(lines)
 
     # Determine image
     image_url = data.get("image_url") or data.get("cover_url")
-
-    # If episode, fallback to parent serial image
+    # Episode fallback to serial image
     if not image_url and data.get("season_id") and "serial" in data:
-        parent_serial = data["serial"]  # make sure you include serial data when fetching episode
+        parent_serial = data["serial"]
         image_url = parent_serial.get("image_url") or parent_serial.get("cover_url")
 
     try:
@@ -97,28 +103,24 @@ async def send_to_telegram(data: dict, bot, chat_id: int):
         logger.error(f"Failed to send telegram message: {e}")
 
 
-
 # ------------------ Fetch Last Items ------------------
 async def send_last_items(bot, crud_class, chat_id: int):
     """
-    Fetch last 5 items from a CRUD class and send dynamically.
-    Handles episode images with fallback to serial images.
+    Fetch last 5 items from a CRUD class and send them.
+    Episodes include serial info if image is missing.
     """
     with safe_session(engine) as session:
         result = crud_class.get_last_five(session)
 
-        if not result.success:  # check the CRUDResult success
+        if not result.success:
             logger.error(f"Failed to fetch data for {crud_class.__name__}: {result.error}")
             return f"❌ {result.error}"
 
-        items = result.data  # extract actual list of items
+        items = result.data
         for item in items:
             data = item.model_dump()
-
-            # Handle episodes: fallback to serial image if episode has none
-            if isinstance(item, Episode) and not data.get("image_url") and getattr(item, "serial", None):
-                data["image_url"] = item.serial.image_url
-
+            if isinstance(item, Episode) and getattr(item, "serial", None):
+                data["serial"] = item.serial.model_dump()
             await send_to_telegram(data, bot, chat_id)
     return "OK"
 
@@ -128,10 +130,10 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = LayoutContainer().resolve('admin')
     username = update.effective_user.username
     if username in ADMINS:
-        await update.message.reply_text(f"Hello {update.effective_user.first_name}", reply_markup=reply_markup)
+        await update.message.reply_text(f"سلام {update.effective_user.first_name}", reply_markup=reply_markup)
     else:
         await update.message.reply_text(
-            f"You don't have permission, {update.effective_user.first_name}. Please contact admin."
+            f"شما دسترسی ندارید، {update.effective_user.first_name}. لطفاً با ادمین تماس بگیرید."
         )
 
 
@@ -145,10 +147,10 @@ async def send_data_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(result)
 
 
-# ------------------ Scheduled Job ------------------
+# ------------------ Scheduled Jobs ------------------
 async def send_data_job(context: ContextTypes.DEFAULT_TYPE):
     """
-    Scheduled job to send latest content automatically.
+    Scheduled job to send latest movies, serials, and episodes.
     """
     for crud_class in [MovieCRUD, SerialCRUD, EpisodeCRUD]:
         await send_last_items(context.bot, crud_class, CHANNEL_ID)
@@ -156,7 +158,7 @@ async def send_data_job(context: ContextTypes.DEFAULT_TYPE):
 
 async def send_with_limit(context: ContextTypes.DEFAULT_TYPE):
     """
-    Send posts with a limit, update `sent` status in DB.
+    Send posts with limit, mark them as sent.
     """
     global skip
     message_sender = TelegramMessageSender(TOKEN)
@@ -187,7 +189,7 @@ def run():
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("send_data", send_data_command))
 
-    # Daily scheduled job at 5:00 PM Iran time
+    # Daily job at 5 PM Iran time
     app.job_queue.run_daily(
         callback=send_with_limit,
         time=time(hour=17, minute=0, tzinfo=IRAN_TZ),
@@ -195,7 +197,7 @@ def run():
         name='daily_5pm_job'
     )
 
-    # Repeating job every 6 hours
+    # Repeat every 6 hours
     app.job_queue.run_repeating(
         callback=send_data_job,
         interval=21600,  # 6 hours
