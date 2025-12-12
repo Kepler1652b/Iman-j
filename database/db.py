@@ -31,7 +31,7 @@ from .models import (
     Season,SeasonBase
 
 )
-
+from sqlalchemy.orm import selectinload
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -796,6 +796,12 @@ class MovieCRUD:
         session.commit()
         return True
 
+    @staticmethod
+    @handle_db_errors("Get last 5 movies")
+    def get_last_five(session: Session):
+        statement = select(Movie).order_by(Movie.id.desc()).limit(5)
+        return list(session.exec(statement).all())
+
 
 
 
@@ -1044,6 +1050,11 @@ class SerialCRUD:
         session.delete(link)
         session.commit()
         return True
+    @staticmethod
+    @handle_db_errors("Get last 5 serials")
+    def get_last_five(session: Session):
+        statement = select(Serial).order_by(Serial.id.desc()).limit(5)
+        return list(session.exec(statement).all())
 
 
 # ============= EPISODE CRUD =============
@@ -1148,6 +1159,19 @@ class EpisodeCRUD:
         session.delete(episode)
         session.commit()
         return True
+    @staticmethod
+    @handle_db_errors("Get last 5 episodes")
+    def get_last_five(session: Session):
+        """
+        Get last 5 episodes, including their parent serial
+        """
+        statement = (
+            select(Episode)
+            .options(selectinload(Episode.serial))  # eager load parent serial
+            .order_by(Episode.id.desc())
+            .limit(5)
+        )
+        return list(session.exec(statement).all())
 
 
 # ============= SEASON CRUD =============
