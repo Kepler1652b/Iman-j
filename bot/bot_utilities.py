@@ -4,7 +4,7 @@ from telegram.error import TelegramError
 from typing import Optional,List
 from html import escape
 import httpx
-from .config_loader import CHANNEL_ID
+from bot.config_loader import CHANNEL_ID
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -189,3 +189,4 @@ def format_episode_message(data):
 
         return message
     return "داده ای برای ارسال وجود ندارد."
+
