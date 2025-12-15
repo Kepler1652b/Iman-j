@@ -118,10 +118,14 @@ async def send_last_items(bot, crud_class, chat_id: int):
 
         items = result.data
         for item in items:
-            data = item.model_dump()
-            if isinstance(item, Episode) and getattr(item, "serial", None):
-                data["serial"] = item.serial.model_dump()
-            await send_to_telegram(data, bot, chat_id)
+            if not item.sent:
+                data = item.model_dump()
+                if isinstance(item, Episode) and getattr(item, "serial", None):
+                    data["serial"] = item.serial.model_dump()
+                await send_to_telegram(data, bot, chat_id)
+                item.sent = True
+                session.add(item)
+                session.commit()
     return "OK"
 
 
@@ -145,6 +149,10 @@ async def send_data_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         result = await send_last_items(context.bot, crud_class, CHANNEL_ID)
         if result != "OK":
             await update.message.reply_text(result)
+
+
+async def send_single_catagory(crud_class, context: ContextTypes.DEFAULT_TYPE):
+        await send_last_items(context.bot, crud_class, CHANNEL_ID)
 
 
 # ------------------ Scheduled Jobs ------------------
@@ -182,9 +190,10 @@ async def send_with_limit(context: ContextTypes.DEFAULT_TYPE):
         session.commit()
     skip += limit
 
-
+app = None
 # ------------------ Run Bot ------------------
 def run():
+    global app
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("send_data", send_data_command))
@@ -197,17 +206,17 @@ def run():
         name='daily_5pm_job'
     )
 
-    # Repeat every 6 hours
-    app.job_queue.run_repeating(
-        callback=send_data_job,
-        interval=21600,  # 6 hours
-        first=10
-    )
+    # # Repeat every 6 hours
+    # app.job_queue.run_repeating(
+    #     callback=send_data_job,
+    #     interval=60,
+    #     first=10
+    # )
 
     logger.info("✅ Bot scheduled successfully")
     print("🚀 Bot started")
     app.run_polling()
-
+    
 
 if __name__ == "__main__":
     run()

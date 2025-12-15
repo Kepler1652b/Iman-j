@@ -1,6 +1,9 @@
 from fastapi import APIRouter
 from sqlmodel import Session
 from .data_models import Movie, Serial, Episode
+from database.models import Episode as DataBaseEpisode
+from bot.bot import send_to_telegram,app
+from bot.config_loader import CHANNEL_ID
 from database.db import (
      MovieCRUD,GenreCRUD,
      ActorCRUD,CountryCRUD,
@@ -24,6 +27,18 @@ from .route_utilities import *
 
 router  = APIRouter(prefix='/v1')
 
+async def send_to_telegram_in_api(session,obj):
+        session.refresh(obj.data)
+        item  = obj.data
+        data = item.model_dump()
+        if isinstance(item, DataBaseEpisode) and getattr(item, "serial", None):
+            data["serial"] = item.serial.model_dump()
+
+        await send_to_telegram(data,app.bot,CHANNEL_ID)
+        item.sent = True
+        session.add(item)
+        session.commit()
+        return True
 
 
 @router.post('/movie')
@@ -52,10 +67,10 @@ async def create(movie_json:Movie):
         add_movie_genres(movie_json,session,movie)
         add_movie_actors(movie_json,session,movie)
         add_movie_country(movie_json,session,movie)
-
+        await send_to_telegram_in_api(session,movie)
         return {"Created":movie_json.title}
 
-    
+
 @router.patch('/movie/{api_id}')
 async def update(api_id:int,movie_json:Movie):
 
@@ -80,6 +95,7 @@ async def update(api_id:int,movie_json:Movie):
             add_movie_genres(movie_json,session,movie)
             add_movie_actors(movie_json,session,movie)
             add_movie_country(movie_json,session,movie)
+            await send_to_telegram_in_api(session,movie)
             return {f"This movie '{movieObj.data.title}'":"Updated "}
         return "No movie with this id"
 
@@ -129,8 +145,7 @@ async def create(serial_json:Episode):
 
             if EpisodeObj.data == None:
                 episode_c = EpisodeCRUD.create(session,episodeBase)
-                session.refresh(episode_c.data)
-
+                await send_to_telegram_in_api(session,episode_c)
 
                 return {"Created":episode.get('title')}
             
@@ -166,6 +181,8 @@ async def update(api_id:int,serial_json:Episode):
         
         if SerialObj.data != None:
             serial = EpisodeCRUD.update(session,SerialObj.data.id,episodeBase.model_dump())
+            await send_to_telegram_in_api(session,serial)
+
             return {f"This movie '{SerialObj.data.title}'":"Updated "}
         return "No episdoe with this id"
 
@@ -215,7 +232,7 @@ async def create(serial_json:Serial):
         add_serial_genre(serial_json,session,serial)
         add_serial_countries(serial_json,session,serial)
         add_serial_actors(serial_json,session,serial)
-
+        await send_to_telegram_in_api(session,serial)
         return {"Created":serial_json.title}
         
 
@@ -246,7 +263,7 @@ async def update(api_id:int,serial_json:Serial):
             add_serial_genre(serial_json,session,serial)
             add_serial_countries(serial_json,session,serial)
             add_serial_actors(serial_json,session,serial)
-
+            await send_to_telegram_in_api(session,serial)
             return {f"This movie '{SerialObj.data.title}'":"Updated "}
         return "No serial with this id"
 
