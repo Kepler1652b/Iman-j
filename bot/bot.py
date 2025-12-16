@@ -207,11 +207,11 @@ def run():
     )
 
     # # Repeat every 6 hours
-    # app.job_queue.run_repeating(
-    #     callback=send_data_job,
-    #     interval=60,
-    #     first=10
-    # )
+    app.job_queue.run_repeating(
+        callback=send_data_job,
+        interval=5,
+        first=2
+    )
 
     logger.info("✅ Bot scheduled successfully")
     print("🚀 Bot started")

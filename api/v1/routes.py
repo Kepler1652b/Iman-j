@@ -67,7 +67,7 @@ async def create(movie_json:Movie):
         add_movie_genres(movie_json,session,movie)
         add_movie_actors(movie_json,session,movie)
         add_movie_country(movie_json,session,movie)
-        await send_to_telegram_in_api(session,movie)
+        # await send_to_telegram_in_api(session,movie)
         return {"Created":movie_json.title}
 
 
@@ -95,7 +95,7 @@ async def update(api_id:int,movie_json:Movie):
             add_movie_genres(movie_json,session,movie)
             add_movie_actors(movie_json,session,movie)
             add_movie_country(movie_json,session,movie)
-            await send_to_telegram_in_api(session,movie)
+            # await send_to_telegram_in_api(session,movie)
             return {f"This movie '{movieObj.data.title}'":"Updated "}
         return "No movie with this id"
 
@@ -145,7 +145,7 @@ async def create(serial_json:Episode):
 
             if EpisodeObj.data == None:
                 episode_c = EpisodeCRUD.create(session,episodeBase)
-                await send_to_telegram_in_api(session,episode_c)
+                # await send_to_telegram_in_api(session,episode_c)
 
                 return {"Created":episode.get('title')}
             
@@ -181,7 +181,7 @@ async def update(api_id:int,serial_json:Episode):
         
         if SerialObj.data != None:
             serial = EpisodeCRUD.update(session,SerialObj.data.id,episodeBase.model_dump())
-            await send_to_telegram_in_api(session,serial)
+            # await send_to_telegram_in_api(session,serial)
 
             return {f"This movie '{SerialObj.data.title}'":"Updated "}
         return "No episdoe with this id"
@@ -232,7 +232,7 @@ async def create(serial_json:Serial):
         add_serial_genre(serial_json,session,serial)
         add_serial_countries(serial_json,session,serial)
         add_serial_actors(serial_json,session,serial)
-        await send_to_telegram_in_api(session,serial)
+        # await send_to_telegram_in_api(session,serial)
         return {"Created":serial_json.title}
         
 
@@ -263,7 +263,7 @@ async def update(api_id:int,serial_json:Serial):
             add_serial_genre(serial_json,session,serial)
             add_serial_countries(serial_json,session,serial)
             add_serial_actors(serial_json,session,serial)
-            await send_to_telegram_in_api(session,serial)
+            # await send_to_telegram_in_api(session,serial)
             return {f"This movie '{SerialObj.data.title}'":"Updated "}
         return "No serial with this id"
 
