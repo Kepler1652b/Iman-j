@@ -33,25 +33,10 @@ import uvicorn
 import threading
 import time
 if __name__ == "__main__":
-    option = int(input("1(bot)\n2(scrape)\n"))
-    if option == 1:
         bot_thread = threading.Thread(target=run, daemon=True)
         bot_thread.start()
         time.sleep(3)
-        uvicorn.run("api.app:app", host="0.0.0.0", port=8000)
-
-    elif option == 2:
-        session = Client()
-        contianer = ScraperContianer()
-        create_db()
-        for sc in contianer.scraper_map:
-            scraper = contianer.resolve(sc,session=session)
-            data = extract_data(scraper)
-            parsed_data_list = parser_data(scraper,data)
-            detials = scraper.detail_parser(parsed_data_list)
-            # write_news_list(detials)    
-            write_post_list(detials)
-
+        uvicorn.run("api.app:app", host="0.0.0.0", port=8000,workers=1)
 
     # make_post()
  
