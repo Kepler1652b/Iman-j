@@ -7,7 +7,7 @@ Prettified messages in Persian for users.
 import logging
 from urllib.parse import unquote
 from datetime import time, timezone, timedelta
-
+from scraper.scraper_utilities import 
 from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import Application, CommandHandler, ContextTypes
@@ -212,7 +212,7 @@ def run():
         interval=5,
         first=2
     )
-
+    
     logger.info("✅ Bot scheduled successfully")
     print("🚀 Bot started")
     app.run_polling()

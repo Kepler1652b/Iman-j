@@ -12,3 +12,4 @@ wheels/
 *.db
 .coverage
 htmlcov/
+.env
