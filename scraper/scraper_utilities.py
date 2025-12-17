@@ -2,7 +2,6 @@ from datetime import datetime
 from database.db import engine,PostCRUD
 from database.models import PostBase
 
-
 from sqlmodel import Session
 import datetime
 from persian_nlp_tools.persian_text_summarizer import TextSummarizationPipeline 
@@ -24,6 +23,8 @@ def write_post_list(detials):
                          continue
                     TextSummarization = TextSummarizationPipeline(d.get("content"),0.3,3)
                     summary = TextSummarization.process_and_summarize()
+                    if not summary:
+                         continue
                     post = PostBase(
 
                         title=d.get("title"),type_='N/A',summary=summary,
@@ -32,5 +33,3 @@ def write_post_list(detials):
                                     
                         )
                     PostCRUD.create(session,post)
-async def ScrapeWeb():
-     pass

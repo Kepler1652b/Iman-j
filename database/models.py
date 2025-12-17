@@ -132,7 +132,7 @@ class MovieBase(SQLModel):
     image_url: str = Field(max_length=500)
     cover_url: str = Field(max_length=500)
     sent: bool = Field(default=False)
-    api_id : int 
+    api_id : int = Field(unique=True)
 
 class Movie(MovieBase, table=True):
     """Movie Table with trailers, genres, countries and actors list"""
@@ -161,7 +161,7 @@ class Movie(MovieBase, table=True):
 class SeasonBase(SQLModel):
     """Season Base Model"""
     title: str = Field(max_length=200)
-    api_id : int
+    api_id : int = Field(unique=True)
     serial_id: int = Field(foreign_key="serial.id")  
 
 class Season(SeasonBase, table=True):
@@ -188,7 +188,7 @@ class SerialBase(SQLModel):
     image_url: str = Field(max_length=500)
     cover_url: str = Field(max_length=500)
     sent: bool = Field(default=False)
-    api_id:int
+    api_id:int = Field(unique=True)
     season_count: int
 
 
@@ -232,7 +232,7 @@ class EpisodeBase(SQLModel):
     season_id: Optional[int] = Field(default=None, foreign_key="season.id")
     serial_id: Optional[int] = Field(default=None, foreign_key="serial.id")
     sent: bool = Field(default=False)
-    api_id : int 
+    api_id : int = Field(unique=True)
 
 
 class Episode(EpisodeBase, table=True):

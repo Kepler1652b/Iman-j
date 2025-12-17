@@ -7,11 +7,10 @@ Prettified messages in Persian for users.
 import logging
 from urllib.parse import unquote
 from datetime import time, timezone, timedelta
-from scraper.scraper_utilities import 
 from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import Application, CommandHandler, ContextTypes
-
+from scraper.scraper import ScrapeWeb
 from database.db import MovieCRUD, SerialCRUD, EpisodeCRUD, PostCRUD, safe_session, engine
 from bot.config_loader import ADMINS, TOKEN, CHANNEL_ID
 from bot.templats.admin import AdminLayout
@@ -199,6 +198,11 @@ def run():
     app.add_handler(CommandHandler("send_data", send_data_command))
 
     # Daily job at 5 PM Iran time
+    app.job_queue.run_daily(
+        callback=send_with_limit,
+        time=time(hour=16, minute=0, tzinfo=IRAN_TZ),
+        name='daily_4pm_job'
+    )
     app.job_queue.run_daily(
         callback=send_with_limit,
         time=time(hour=17, minute=0, tzinfo=IRAN_TZ),

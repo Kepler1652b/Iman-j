@@ -3,7 +3,7 @@ import feedparser
 from typing import Any, Protocol,Dict,List
 from httpx import Client
 from bs4 import BeautifulSoup
-from .scraper_utilities import format_timestamp
+from scraper.scraper_utilities import format_timestamp,write_post_list
 
 
 
@@ -409,6 +409,17 @@ def parser_data(scraper:Scraper,data):
     return scraper.parse(data)
 
 
+async def ScrapeWeb():
+    session = Client()
+    contianer = ScraperContianer()
+
+    sc_list = ['moviemag','caffecinema','fromcinema','gamefa']
+    for sc in sc_list:
+        scraper = contianer.resolve(sc,session=session)
+        data = extract_data(scraper)
+        parsed_data_list = parser_data(scraper,data)
+        detials = scraper.detail_parser(parsed_data_list)
+        write_post_list(detials)    
 
 
 
