@@ -58,10 +58,9 @@ async def create(movie_json:Movie):
     with Session(engine) as session:
 
         movieObj= MovieCRUD.get_by_api_id(session,movie_json.id)
-        print(movieObj)
         if movieObj.data != None:
-            return {f"{movieObj.data.title}":f"already exist with id : {movieObj.data.id}"}
-        
+            return {f"{movieObj.data.title}":f"already exist with id : {movieObj.data.api_id}"}
+
         movie = MovieCRUD.create(session,movie)
         add_movie_trailer(movie_json,session,movie)
         add_movie_genres(movie_json,session,movie)
@@ -97,7 +96,7 @@ async def update(api_id:int,movie_json:Movie):
             add_movie_country(movie_json,session,movie)
             # await send_to_telegram_in_api(session,movie)
             return {f"'{movieObj.data.title}'":"Updated "}
-        return {"No movie with this id":movieObj.data.id}
+        return {"No movie with this id":movieObj.data.api_id}
 
 
 @router.delete('/movie/{api_id}')
@@ -149,7 +148,7 @@ async def create(serial_json:Episode):
 
                 return {"Created":episode.get('title')}
             
-            return {f"{EpisodeObj.data.title}":f"already exist with this is {EpisodeObj.data.id}"}
+            return {f"{EpisodeObj.data.title}":f"already exist with this is {EpisodeObj.data.api_id}"}
         return "NO serial with this id exist"
 
 
@@ -223,7 +222,7 @@ async def create(serial_json:Serial):
         SerialObj= SerialCRUD.get_by_title(session,serial_json.title)
 
         if SerialObj.data != None:
-            return {f"{SerialObj.data.title}":f"already exist whit id :{SerialObj.data.id}"}
+            return {f"{SerialObj.data.title}":f"already exist whit id :{SerialObj.data.api_id}"}
         
 
         serial = SerialCRUD.create(session,serial)
@@ -265,7 +264,7 @@ async def update(api_id:int,serial_json:Serial):
             add_serial_actors(serial_json,session,serial)
             # await send_to_telegram_in_api(session,serial)
             return {f"{SerialObj.data.title}":"Updated "}
-        return {"No serial with this id":serial.data.id}
+        return {"No serial with this id":serial.data.api_id}
 
 
 
