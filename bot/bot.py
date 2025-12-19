@@ -186,7 +186,7 @@ async def send_with_limit(context: ContextTypes.DEFAULT_TYPE):
                 )
                 post.sent = True
                 session.add(post)
-        session.commit()
+                session.commit()
     skip += limit
 
 app = None
@@ -210,6 +210,12 @@ def run():
         name='daily_5pm_job'
     )
 
+    app.job_queue.run_repeating(
+        callback=send_with_limit,
+        interval=3600,
+        data={'limit': 5},
+        first=2
+    )
     # # Repeat every 6 hours
     app.job_queue.run_repeating(
         callback=send_data_job,

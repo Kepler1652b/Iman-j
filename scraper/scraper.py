@@ -4,7 +4,7 @@ from typing import Any, Protocol,Dict,List
 from httpx import Client
 from bs4 import BeautifulSoup
 from scraper.scraper_utilities import format_timestamp,write_post_list
-
+from telegram.ext import  ContextTypes
 
 
 
@@ -409,7 +409,7 @@ def parser_data(scraper:Scraper,data):
     return scraper.parse(data)
 
 
-async def ScrapeWeb():
+async def ScrapeWeb(context: ContextTypes.DEFAULT_TYPE):
     session = Client()
     contianer = ScraperContianer()
 
