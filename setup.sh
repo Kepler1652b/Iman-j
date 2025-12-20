@@ -1,101 +1,186 @@
+
 #!/usr/bin/env bash
 set -e
 
-# -----------------------------
-# Configuration
-# -----------------------------
 PORT=8090
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REAL_USER="${SUDO_USER:-$USER}"
-REAL_HOME="$(getent passwd "$REAL_USER" | cut -d: -f6)"
-PIPX_BIN="$REAL_HOME/.local/bin"
 
 echo "🚀 Starting setup..."
 echo "📂 Project directory: $PROJECT_DIR"
-echo "👤 Running as user: $REAL_USER"
 
 # -----------------------------
-# Ensure pipx is installed
+# Detect UV path
 # -----------------------------
-export PATH="$PIPX_BIN:$PATH"
+echo "🔍 Detecting uv installation..."
+UV_PATH=$(command -v uv 2>/dev/null || echo "")
 
-if ! command -v pipx >/dev/null 2>&1; then
-    echo "📦 Installing pipx..."
-    python3 -m pip install --user pipx
-    python3 -m pipx ensurepath
-    export PATH="$PIPX_BIN:$PATH"
+if [ -z "$UV_PATH" ]; then
+    echo "❌ uv not found. Installing..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    
+    # Reload shell environment
+    export PATH="$HOME/.cargo/bin:$PATH"
+    UV_PATH=$(command -v uv 2>/dev/null || echo "$HOME/.cargo/bin/uv")
+    
+    if [ ! -f "$UV_PATH" ]; then
+        UV_PATH="$HOME/.local/bin/uv"
+    fi
+    
+    if [ ! -f "$UV_PATH" ]; then
+        echo "❌ Failed to install uv"
+        exit 1
+    fi
 fi
 
-# -----------------------------
-# Install required Python packages via pipx
-# -----------------------------
-install_pipx_pkg() {
-    local pkg=$1
-    if ! command -v "$pkg" >/dev/null 2>&1; then
-        echo "📦 Installing $pkg via pipx..."
-        pipx install --force "$pkg"
-    else
-        echo "✅ $pkg already installed"
-    fi
-}
-
-install_pipx_pkg uv
-install_pipx_pkg uvicorn
-install_pipx_pkg fastapi
-
-UV_PATH="$(command -v uv)"
-echo "✅ uv found at: $UV_PATH"
+echo "✅ Found uv at: $UV_PATH"
 
 # -----------------------------
-# Generate systemd service function
+# Go to project directory
 # -----------------------------
-generate_service() {
-    local name="$1"
-    local exec_cmd="$2"
-    local description="$3"
+cd "$PROJECT_DIR" || { echo "❌ Directory $PROJECT_DIR not found"; exit 1; }
 
-    echo "🧩 Generating $name.service..."
+# -----------------------------
+# Python dependencies
+# -----------------------------
+echo "📦 Installing Python dependencies..."
+"$UV_PATH" sync
+"$UV_PATH" add parsivar
 
-    sudo tee "/etc/systemd/system/$name.service" > /dev/null <<EOF
+# -----------------------------
+# Generate systemd service files
+# -----------------------------
+echo "🧩 Generating systemd service files..."
+
+# Create bot.service
+cat > /tmp/bot.service <<EOF
 [Unit]
-Description=$description
+Description=Telegram Bot
 After=network.target
 
 [Service]
 Type=simple
-User=$REAL_USER
+User=$USER
 WorkingDirectory=$PROJECT_DIR
-ExecStart=$exec_cmd
+ExecStart=$UV_PATH run main.py
+Environment="PATH=$HOME/.local/bin:$HOME/.cargo/bin:/usr/local/bin:/usr/bin:/bin"
+
 Restart=always
 RestartSec=10
+
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=$name
+SyslogIdentifier=telegram-bot
 
 [Install]
 WantedBy=multi-user.target
 EOF
-}
+
+# Create fastapi.service
+cat > /tmp/fastapi.service <<EOF
+[Unit]
+Description=FastAPI Application
+After=network.target
+
+[Service]
+Type=simple
+User=$USER
+WorkingDirectory=$PROJECT_DIR
+ExecStart=$UV_PATH run uvicorn api.app:app --host 0.0.0.0 --port $PORT
+Environment="PATH=$HOME/.local/bin:$HOME/.cargo/bin:/usr/local/bin:/usr/bin:/bin"
+
+Restart=always
+RestartSec=10
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fastapi-app
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+echo "✅ Service files generated"
 
 # -----------------------------
-# Create Bot service
+# Install systemd services
 # -----------------------------
-generate_service "bot" "$UV_PATH run -- python main.py" "Telegram Bot"
-
-# -----------------------------
-# Create FastAPI service
-# -----------------------------
-generate_service "fastapi" "$UV_PATH run -- uvicorn api.app:app --host 0.0.0.0 --port $PORT" "FastAPI Application"
-
-echo "✅ Services generated successfully"
-
-# -----------------------------
-# Enable & start services
-# -----------------------------
+echo "🔧 Installing systemd services..."
+sudo cp /tmp/bot.service /tmp/fastapi.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now bot.service fastapi.service
+sudo systemctl enable fastapi bot
+sudo systemctl start fastapi bot
 
-echo "✅ Services enabled and started"
-echo "🌐 FastAPI URL: http://localhost:$PORT"
-echo "📝 Check logs with: sudo journalctl -u bot -f"
-echo "              or: sudo journalctl -u fastapi -f"
+# Clean up temp files
+rm /tmp/bot.service /tmp/fastapi.service
+
+# -----------------------------
+# Firewall configuration
+# -----------------------------
+echo "🔐 Configuring firewall for port $PORT..."
+
+if command -v ufw >/dev/null 2>&1; then
+    echo "✅ UFW detected"
+    sudo ufw allow "${PORT}/tcp" || true
+    sudo ufw reload || true
+elif command -v iptables >/dev/null 2>&1; then
+    echo "⚠️  UFW not found, using iptables"
+    sudo iptables -C INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT 2>/dev/null \
+        || sudo iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+    sudo iptables -C INPUT -p tcp --dport "${PORT}" -j ACCEPT 2>/dev/null \
+        || sudo iptables -A INPUT -p tcp --dport "${PORT}" -j ACCEPT
+    
+    # Persist rules
+    if command -v netfilter-persistent >/dev/null 2>&1; then
+        sudo netfilter-persistent save
+    elif [ -f /etc/debian_version ]; then
+        sudo apt-get update
+        sudo apt-get install -y iptables-persistent
+        sudo netfilter-persistent save
+    elif [ -f /etc/redhat-release ]; then
+        sudo service iptables save
+    else
+        echo "⚠️  Please manually save iptables rules"
+    fi
+else
+    echo "❌ No supported firewall found (ufw or iptables)"
+    exit 1
+fi
+
+# -----------------------------
+# Verify services
+# -----------------------------
+echo ""
+echo "🔍 Verifying services..."
+sleep 2
+
+echo ""
+echo "📊 FastAPI status:"
+sudo systemctl status fastapi --no-pager -n 5 || true
+
+echo ""
+echo "📊 Bot status:"
+sudo systemctl status bot --no-pager -n 5 || true
+
+# -----------------------------
+# Done
+# -----------------------------
+echo ""
+echo "================================================================"
+echo "✅ Setup completed successfully!"
+echo "================================================================"
+echo ""
+echo "📍 Project directory: $PROJECT_DIR"
+echo "🔧 UV path: $UV_PATH"
+echo "👤 Running as user: $USER"
+echo ""
+echo "🌐 FastAPI: http://localhost:$PORT"
+echo ""
+echo "📝 Useful commands:"
+echo "  sudo systemctl status fastapi    # Check FastAPI status"
+echo "  sudo systemctl status bot        # Check bot status"
+echo "  sudo journalctl -u fastapi -f    # View FastAPI logs"
+echo "  sudo journalctl -u bot -f        # View bot logs"
+echo "  sudo systemctl restart fastapi   # Restart FastAPI"
+echo "  sudo systemctl restart bot       # Restart bot"
+echo ""
+echo "================================================================"
