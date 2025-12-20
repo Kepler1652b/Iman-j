@@ -5,8 +5,13 @@ from database.db import create_db
 from contextlib import asynccontextmanager
 
 
-DB_PATH = 'C:/Users/mfoad/OneDrive/Documents/Codes/Karlancer/Iman-J-Telegram/movies.db'
+from pathlib import Path
 
+# Get project root (assuming script is in a subdirectory)
+BASE_DIR = Path(__file__).parent.parent.resolve()
+
+# Database in project root
+DB_PATH = BASE_DIR / 'movies.db'
 
 
 @asynccontextmanager
