@@ -1,50 +1,47 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, status
 from sqlmodel import Session
 from .data_models import Movie, Serial, Episode
 from database.models import Episode as DataBaseEpisode
-from bot.bot import send_to_telegram,app
+from bot.bot import send_to_telegram, app
 from bot.config_loader import CHANNEL_ID
 from database.db import (
-     MovieCRUD,GenreCRUD,
-     ActorCRUD,CountryCRUD,
-     TrailerCRUD,SerialCRUD,
-     engine,EpisodeCRUD,
+     MovieCRUD, GenreCRUD,
+     ActorCRUD, CountryCRUD,
+     TrailerCRUD, SerialCRUD,
+     engine, EpisodeCRUD,
      SeasonCRUD
-
-     )
+)
 
 from database.models import ( 
-     MovieBase,TrailerBase, 
-     GenreBase,ActorBase,
+     MovieBase, TrailerBase, 
+     GenreBase, ActorBase,
      CountryBase,
-     SeasonBase,EpisodeBase,
+     SeasonBase, EpisodeBase,
      SerialBase
-
-                             
 )
 
 from .route_utilities import *
 
-router  = APIRouter(prefix='/v1')
+router = APIRouter(prefix='/v1')
 
-async def send_to_telegram_in_api(session,obj):
-        session.refresh(obj.data)
-        item  = obj.data
-        data = item.model_dump()
-        if isinstance(item, DataBaseEpisode) and getattr(item, "serial", None):
-            data["serial"] = item.serial.model_dump()
+async def send_to_telegram_in_api(session, obj):
+    session.refresh(obj.data)
+    item = obj.data
+    data = item.model_dump()
+    if isinstance(item, DataBaseEpisode) and getattr(item, "serial", None):
+        data["serial"] = item.serial.model_dump()
 
-        await send_to_telegram(data,app.bot,CHANNEL_ID)
-        item.sent = True
-        session.add(item)
-        session.commit()
-        return True
+    await send_to_telegram(data, app.bot, CHANNEL_ID)
+    item.sent = True
+    session.add(item)
+    session.commit()
+    return True
 
 
-@router.post('/movie')
-async def create(movie_json:Movie):
+@router.post('/movie', status_code=status.HTTP_201_CREATED)
+async def create(movie_json: Movie):
     movie = MovieBase(
-        title=movie_json.title,type_=movie_json.type,
+        title=movie_json.title, type_=movie_json.type,
         description=movie_json.description,
         year=movie_json.year,
         duration=movie_json.duration,
@@ -53,28 +50,31 @@ async def create(movie_json:Movie):
         image_url=movie_json.image,
         cover_url=movie_json.cover,
         api_id=movie_json.id
-        )
+    )
 
     with Session(engine) as session:
-
-        movieObj= MovieCRUD.get_by_api_id(session,movie_json.id)
-        if movieObj.data != None:
-            return {f"{movieObj.data.title}":f"already exist with id : {movieObj.data.api_id}"}
-
-        movie = MovieCRUD.create(session,movie)
-        add_movie_trailer(movie_json,session,movie)
-        add_movie_genres(movie_json,session,movie)
-        add_movie_actors(movie_json,session,movie)
-        add_movie_country(movie_json,session,movie)
-        # await send_to_telegram_in_api(session,movie)
-        return {"Created":movie_json.title}
+        movieObj = MovieCRUD.get_by_api_id(session, movie_json.id)
+        
+        if movieObj.data is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"{movieObj.data.title} already exist with id : {movieObj.data.api_id}"
+            )
+        
+        movie = MovieCRUD.create(session, movie)
+        add_movie_trailer(movie_json, session, movie)
+        add_movie_genres(movie_json, session, movie)
+        add_movie_actors(movie_json, session, movie)
+        add_movie_country(movie_json, session, movie)
+        # await send_to_telegram_in_api(session, movie)
+        
+        return {"Created": movie_json.title}
 
 
 @router.patch('/movie/{api_id}')
-async def update(api_id:int,movie_json:Movie):
-
+async def update(api_id: int, movie_json: Movie):
     movie = MovieBase(
-        title=movie_json.title,type_=movie_json.type,
+        title=movie_json.title, type_=movie_json.type,
         description=movie_json.description,
         year=movie_json.year,
         duration=movie_json.duration,
@@ -83,128 +83,151 @@ async def update(api_id:int,movie_json:Movie):
         image_url=movie_json.image,
         cover_url=movie_json.cover,
         api_id=movie_json.id
-        )
+    )
 
     with Session(engine) as session:
-
-        movieObj= MovieCRUD.get_by_api_id(session,api_id)
-        if movieObj.data != None:
-            movie = MovieCRUD.update(session,movieObj.data.id,movie.model_dump())
-            add_movie_trailer(movie_json,session,movie)
-            add_movie_genres(movie_json,session,movie)
-            add_movie_actors(movie_json,session,movie)
-            add_movie_country(movie_json,session,movie)
-            # await send_to_telegram_in_api(session,movie)
-            return {f"'{movieObj.data.title}'":"Updated "}
-        return {"No movie with this id":movieObj.data.api_id}
+        movieObj = MovieCRUD.get_by_api_id(session, api_id)
+        
+        if movieObj.data is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No movie with this id: {api_id}"
+            )
+        
+        movie = MovieCRUD.update(session, movieObj.data.id, movie.model_dump())
+        add_movie_trailer(movie_json, session, movie)
+        add_movie_genres(movie_json, session, movie)
+        add_movie_actors(movie_json, session, movie)
+        add_movie_country(movie_json, session, movie)
+        # await send_to_telegram_in_api(session, movie)
+        
+        return {f"'{movieObj.data.title}'": "Updated"}
 
 
 @router.delete('/movie/{api_id}')
-async def delete(api_id:int):
+async def delete(api_id: int):
     with Session(engine) as session:
-        movieObj= MovieCRUD.get_by_api_id(session,api_id)
-        if movieObj.data != None:
-            MovieCRUD.delete(session,movieObj.data.id)
-            return True
-        return False
+        movieObj = MovieCRUD.get_by_api_id(session, api_id)
         
+        if movieObj.data is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No movie found with id: {api_id}"
+            )
+        
+        MovieCRUD.delete(session, movieObj.data.id)
+        return True
 
-@router.post('/episode')
-async def create(serial_json:Episode):
+
+@router.post('/episode', status_code=status.HTTP_201_CREATED)
+async def create(serial_json: Episode):
     episode = serial_json.episode
     season = episode.get("season")
-    
-
 
     with Session(engine) as session:
-
-
-        serial = SerialCRUD.get_by_api_id(session,serial_json.id)
-        if serial.data != None:
-            seasonObj = SeasonBase(
-                title=season.get("title"),
-                api_id=season.get("id"),
-                serial_id = serial.data.id
+        serial = SerialCRUD.get_by_api_id(session, serial_json.id)
+        
+        if serial.data is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="NO serial with this id exist"
             )
-            season = SeasonCRUD.get_by_api_id(session,season.get("id"))
-            if season.data == None:
-                season = SeasonCRUD.create(session=session,season_data=seasonObj)
-                session.refresh(season.data)
+        
+        seasonObj = SeasonBase(
+            title=season.get("title"),
+            api_id=season.get("id"),
+            serial_id=serial.data.id
+        )
+        season = SeasonCRUD.get_by_api_id(session, season.get("id"))
+        
+        if season.data is None:
+            season = SeasonCRUD.create(session=session, season_data=seasonObj)
+            session.refresh(season.data)
 
-            episodeBase = EpisodeBase(
-                title = episode.get("title"),
-                description = episode.get("description"),
-                duration = episode.get("duration"),
-                season_id = season.data.id,
-                serial_id = serial.data.id,
-                api_id = episode.get("id")
+        episodeBase = EpisodeBase(
+            title=episode.get("title"),
+            description=episode.get("description"),
+            duration=episode.get("duration"),
+            season_id=season.data.id,
+            serial_id=serial.data.id,
+            api_id=episode.get("id")
+        )
+
+        EpisodeObj = EpisodeCRUD.get_by_api_id(session, episode.get('id'))
+
+        if EpisodeObj.data is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"{EpisodeObj.data.title} already exist with this is {EpisodeObj.data.api_id}"
             )
+        
+        episode_c = EpisodeCRUD.create(session, episodeBase)
+        # await send_to_telegram_in_api(session, episode_c)
 
-            EpisodeObj= EpisodeCRUD.get_by_api_id(session,episode.get('id'))
-
-            if EpisodeObj.data == None:
-                episode_c = EpisodeCRUD.create(session,episodeBase)
-                # await send_to_telegram_in_api(session,episode_c)
-
-                return {"Created":episode.get('title')}
-            
-            return {f"{EpisodeObj.data.title}":f"already exist with this is {EpisodeObj.data.api_id}"}
-        return "NO serial with this id exist"
+        return {"Created": episode.get('title')}
 
 
 @router.patch('/episode/{api_id}')
-async def update(api_id:int,serial_json:Episode):
+async def update(api_id: int, serial_json: Episode):
     episode = serial_json.episode
     season_json = episode.get("season")
 
-
     with Session(engine) as session:
+        SerialObj = EpisodeCRUD.get_by_api_id(session, api_id)
         
-        SerialObj= EpisodeCRUD.get_by_api_id(session,api_id)
-        serial = SerialCRUD.get_by_api_id(session,serial_json.id)
-        season = SeasonCRUD.get_by_api_id(session,season_json.get("id"))
-        SeasonObj = SeasonBase(title=season_json.get('title'),api_id=season_json.get('id'),serial_id=serial.data.id)
-        if season.data != None:
-            season = SeasonCRUD.update(session,season.data.id,SeasonObj.model_dump())
-        else:
-            season = SeasonCRUD.create(session,SeasonObj)
-
-        episodeBase = EpisodeBase(
-                title = episode.get("title"),
-                description = episode.get("description"),
-                duration = episode.get("duration"),
-                season_id = season.data.id,
-                serial_id = serial.data.id,
-                api_id = episode.get("id")
+        if SerialObj.data is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No episode with this id"
             )
         
-        if SerialObj.data != None:
-            serial = EpisodeCRUD.update(session,SerialObj.data.id,episodeBase.model_dump())
-            # await send_to_telegram_in_api(session,serial)
+        serial = SerialCRUD.get_by_api_id(session, serial_json.id)
+        season = SeasonCRUD.get_by_api_id(session, season_json.get("id"))
+        SeasonObj = SeasonBase(
+            title=season_json.get('title'),
+            api_id=season_json.get('id'),
+            serial_id=serial.data.id
+        )
+        
+        if season.data is not None:
+            season = SeasonCRUD.update(session, season.data.id, SeasonObj.model_dump())
+        else:
+            season = SeasonCRUD.create(session, SeasonObj)
 
-            return {f"This movie '{SerialObj.data.title}'":"Updated "}
-        return "No episdoe with this id"
+        episodeBase = EpisodeBase(
+            title=episode.get("title"),
+            description=episode.get("description"),
+            duration=episode.get("duration"),
+            season_id=season.data.id,
+            serial_id=serial.data.id,
+            api_id=episode.get("id")
+        )
 
+        serial = EpisodeCRUD.update(session, SerialObj.data.id, episodeBase.model_dump())
+        # await send_to_telegram_in_api(session, serial)
+
+        return {f"This movie '{SerialObj.data.title}'": "Updated"}
 
 
 @router.delete('/episode/{api_id}')
-async def delete(api_id:int):
+async def delete(api_id: int):
     with Session(engine) as session:
-        EpisodeObj= EpisodeCRUD.get_by_api_id(session,api_id)
-        if EpisodeObj.data != None:
-            EpisodeCRUD.delete(session,EpisodeObj.data.id)
-            return True
-        return False
+        EpisodeObj = EpisodeCRUD.get_by_api_id(session, api_id)
         
+        if EpisodeObj.data is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No episode found with id: {api_id}"
+            )
+        
+        EpisodeCRUD.delete(session, EpisodeObj.data.id)
+        return True
 
 
-
-
-
-@router.post('/serial')
-async def create(serial_json:Serial):
+@router.post('/serial', status_code=status.HTTP_201_CREATED)
+async def create(serial_json: Serial):
     serial = SerialBase(
-        title=serial_json.title,type_=serial_json.type,
+        title=serial_json.title, type_=serial_json.type,
         description=serial_json.description,
         year=serial_json.year,
         duration=serial_json.duration,
@@ -214,34 +237,32 @@ async def create(serial_json:Serial):
         cover_url=serial_json.cover,
         api_id=serial_json.id,
         season_count=serial_json.season_count
-
-        )
+    )
 
     with Session(engine) as session:
+        SerialObj = SerialCRUD.get_by_title(session, serial_json.title)
 
-        SerialObj= SerialCRUD.get_by_title(session,serial_json.title)
+        if SerialObj.data is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"{SerialObj.data.title} already exist whit id :{SerialObj.data.api_id}"
+            )
 
-        if SerialObj.data != None:
-            return {f"{SerialObj.data.title}":f"already exist whit id :{SerialObj.data.api_id}"}
+        serial = SerialCRUD.create(session, serial)
+
+        add_serial_trailer(serial_json, session, serial)
+        add_serial_genre(serial_json, session, serial)
+        add_serial_countries(serial_json, session, serial)
+        add_serial_actors(serial_json, session, serial)
+        # await send_to_telegram_in_api(session, serial)
         
-
-        serial = SerialCRUD.create(session,serial)
-
-        add_serial_trailer(serial_json,session,serial)
-        add_serial_genre(serial_json,session,serial)
-        add_serial_countries(serial_json,session,serial)
-        add_serial_actors(serial_json,session,serial)
-        # await send_to_telegram_in_api(session,serial)
-        return {"Created":serial_json.title}
-        
-
-    
+        return {"Created": serial_json.title}
 
 
 @router.patch('/serial/{api_id}')
-async def update(api_id:int,serial_json:Serial):
+async def update(api_id: int, serial_json: Serial):
     serial = SerialBase(
-        title=serial_json.title,type_=serial_json.type,
+        title=serial_json.title, type_=serial_json.type,
         description=serial_json.description,
         year=serial_json.year,
         duration=serial_json.duration,
@@ -251,29 +272,37 @@ async def update(api_id:int,serial_json:Serial):
         cover_url=serial_json.cover,
         api_id=serial_json.id,
         season_count=serial_json.season_count
-
-        )
+    )
+    
     with Session(engine) as session:
-
-        SerialObj= SerialCRUD.get_by_api_id(session,api_id)
-        if SerialObj.data != None:
-            serial = SerialCRUD.update(session,SerialObj.data.id,serial.model_dump())
-            add_serial_trailer(serial_json,session,serial)
-            add_serial_genre(serial_json,session,serial)
-            add_serial_countries(serial_json,session,serial)
-            add_serial_actors(serial_json,session,serial)
-            # await send_to_telegram_in_api(session,serial)
-            return {f"{SerialObj.data.title}":"Updated "}
-        return {"No serial with this id":serial.data.api_id}
-
+        SerialObj = SerialCRUD.get_by_api_id(session, api_id)
+        
+        if SerialObj.data is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No serial with this id: {api_id}"
+            )
+        
+        serial = SerialCRUD.update(session, SerialObj.data.id, serial.model_dump())
+        add_serial_trailer(serial_json, session, serial)
+        add_serial_genre(serial_json, session, serial)
+        add_serial_countries(serial_json, session, serial)
+        add_serial_actors(serial_json, session, serial)
+        # await send_to_telegram_in_api(session, serial)
+        
+        return {f"{SerialObj.data.title}": "Updated"}
 
 
 @router.delete('/serial/{api_id}')
-async def delete(api_id:int):
+async def delete(api_id: int):
     with Session(engine) as session:
-        SerialObj= SerialCRUD.get_by_api_id(session,api_id)
-        if SerialObj.data != None:
-            SerialCRUD.delete(session,SerialObj.data.id)
-            return True
-        return False
+        SerialObj = SerialCRUD.get_by_api_id(session, api_id)
         
+        if SerialObj.data is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No serial found with id: {api_id}"
+            )
+        
+        SerialCRUD.delete(session, SerialObj.data.id)
+        return True
