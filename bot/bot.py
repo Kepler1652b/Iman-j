@@ -127,7 +127,7 @@ async def send_last_items(bot, crud_class, chat_id: int):
                 # session.commit()
                 session.delete(item)
                 session.commit()
-
+                
     return "OK"
 
 
@@ -217,9 +217,9 @@ def run():
 
     app.job_queue.run_repeating(
         callback=send_with_limit,
-        interval=3600,
+        interval=3800,
         data={'limit': 5},
-        first=2
+        first=120
     )
     # # Repeat every 6 hours
     app.job_queue.run_repeating(
@@ -230,7 +230,7 @@ def run():
     app.job_queue.run_repeating(
         callback=run_scraper,
         interval=3600,
-        first=2
+        first=10
     )
     
     logger.info("✅ Bot scheduled successfully")

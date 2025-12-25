@@ -168,10 +168,10 @@ class Season(SeasonBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
 
     serial: "Serial" = Relationship(back_populates="seasons")
-    episodes: List["Episode"] = Relationship(
-        back_populates="season_obj",
-        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
-    )
+    # episodes: List["Episode"] = Relationship(
+    #     back_populates="season_obj",
+    #     sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    # )
 
 
 # ============= SERIAL MODEL =============
@@ -216,10 +216,10 @@ class Serial(SerialBase, table=True):
         back_populates="serial",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
-    episodes: List["Episode"] = Relationship(
-        back_populates="serial",
-        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
-    )
+    # episodes: List["Episode"] = Relationship(
+    #     back_populates="serial",
+    #     sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    # )
 
 
 # ============= SERIAL EPISODE MODEL =============
@@ -229,18 +229,18 @@ class EpisodeBase(SQLModel):
     title: str = Field(index=True, max_length=300)
     description: str = Field(sa_column=Column(Text))
     duration: str
-    season_id: Optional[int] = Field(default=None, foreign_key="season.id")
-    serial_id: Optional[int] = Field(default=None, foreign_key="serial.id")
+    # season_id: Optional[int] = Field(default=None, foreign_key="season.id")
+    # serial_id: Optional[int] = Field(default=None, foreign_key="serial.id")
     sent: bool = Field(default=False)
     api_id : int = Field(unique=True)
-
+    image_url: str = Field(max_length=500)
 
 class Episode(EpisodeBase, table=True):
     """Serial Episode Table"""
     id: Optional[int] = Field(default=None, primary_key=True)
     
-    season_obj: Optional[Season] = Relationship(back_populates="episodes")
-    serial: Optional[Serial] = Relationship(back_populates="episodes")
+    # season_obj: Optional[Season] = Relationship(back_populates="episodes")
+    # serial: Optional[Serial] = Relationship(back_populates="episodes")
 
 
 # ============= POST MODEL =============

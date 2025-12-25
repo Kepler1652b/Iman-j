@@ -1167,7 +1167,7 @@ class EpisodeCRUD:
         """
         statement = (
             select(Episode)
-            .options(selectinload(Episode.serial))  # eager load parent serial
+            # .options(selectinload(Episode.serial))  # eager load parent serial
             .order_by(Episode.id.desc())
             .limit(5)
         )
