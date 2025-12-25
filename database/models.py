@@ -247,7 +247,7 @@ class Episode(EpisodeBase, table=True):
 
 class PostBase(SQLModel):
     """Post Base Model"""
-    title: str = Field(unique=True, max_length=300)
+    title: str = Field(unique=True, max_length=3000)
     type_: str = Field(max_length=50)
     summary: str 
     schedule: Optional[datetime] = Field(default=None)

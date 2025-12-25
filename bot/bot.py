@@ -189,6 +189,8 @@ async def send_with_limit(context: ContextTypes.DEFAULT_TYPE):
                 session.commit()
     skip += limit
 
+async def run_scraper(context: ContextTypes.DEFAULT_TYPE):
+    await ScrapeWeb(context)
 app = None
 # ------------------ Run Bot ------------------
 def run():
@@ -197,12 +199,12 @@ def run():
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("send_data", send_data_command))
 
-    # Daily job at 5 PM Iran time
-    app.job_queue.run_daily(
-        callback=ScrapeWeb,
-        time=time(hour=16, minute=0, tzinfo=IRAN_TZ),
-        name='daily_4pm_job'
-    )
+    # # Daily job at 5 PM Iran time
+    # app.job_queue.run_daily(
+    #     callback=ScrapeWeb,
+    #     time=time(hour=16, minute=0, tzinfo=IRAN_TZ),
+    #     name='daily_4pm_job'
+    # )
     app.job_queue.run_daily(
         callback=send_with_limit,
         time=time(hour=17, minute=0, tzinfo=IRAN_TZ),
@@ -220,6 +222,11 @@ def run():
     app.job_queue.run_repeating(
         callback=send_data_job,
         interval=5,
+        first=2
+    )
+    app.job_queue.run_repeating(
+        callback=run_scraper,
+        interval=3600,
         first=2
     )
     
