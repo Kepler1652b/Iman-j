@@ -122,9 +122,12 @@ async def send_last_items(bot, crud_class, chat_id: int):
                 if isinstance(item, Episode) and getattr(item, "serial", None):
                     data["serial"] = item.serial.model_dump()
                 await send_to_telegram(data, bot, chat_id)
-                item.sent = True
-                session.add(item)
+                # item.sent = True
+                # session.add(item)
+                # session.commit()
+                session.delete(item)
                 session.commit()
+
     return "OK"
 
 
