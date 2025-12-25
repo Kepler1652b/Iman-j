@@ -192,6 +192,16 @@ async def send_with_limit(context: ContextTypes.DEFAULT_TYPE):
                 session.commit()
     skip += limit
 
+async def delete_all_posts(context: ContextTypes.DEFAULT_TYPE):
+    with safe_session(engine) as session:
+        try:
+            posts = PostCRUD.get_all(session,limit=1000)
+            for post in posts.data:
+                session.delete(post)
+                session.commit()
+        except:
+            return None
+
 async def run_scraper(context: ContextTypes.DEFAULT_TYPE):
     await ScrapeWeb(context)
 app = None
@@ -221,6 +231,13 @@ def run():
         data={'limit': 5},
         first=120
     )
+
+    app.job_queue.run_repeating(
+        callback=delete_all_posts,
+        interval=604800,
+        first=604800
+    )
+
     # # Repeat every 6 hours
     app.job_queue.run_repeating(
         callback=send_data_job,
