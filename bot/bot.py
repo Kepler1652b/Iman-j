@@ -49,6 +49,7 @@ async def send_to_telegram(data: dict, bot, chat_id: int):
     Prettified with Persian labels.
     Uses parent serial image for episodes if no image.
     """
+
     if not data:
         logger.warning("No data to send")
         return
@@ -79,9 +80,10 @@ async def send_to_telegram(data: dict, bot, chat_id: int):
     for key, persian_label in FIELD_MAP.items():
         if key in data and data[key] is not None:
             value = data[key]
-            if isinstance(value, bool):
-                value = "✅" if value else "❌"
-            lines.append(f"• {persian_label}: {value}")
+            if value != 'null' and value != "":
+                if isinstance(value, bool):
+                    value = "✅" if value else "❌"
+                lines.append(f"• {persian_label}: {value}")
 
     message = "\n".join(lines)
 

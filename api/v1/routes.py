@@ -123,6 +123,8 @@ async def delete(api_id: int):
 async def create(serial_json: Episode):
     episode = serial_json.episode
     season = episode.get("season")
+    description = episode.get("description")
+    duration = episode.get("duration")
     with Session(engine) as session:
         # serial = SerialCRUD.get_by_api_id(session, serial_json.id)
         
@@ -142,11 +144,15 @@ async def create(serial_json: Episode):
         # if season.data is None:
         #     season = SeasonCRUD.create(session=session, season_data=seasonObj)
         #     session.refresh(season.data)
+        if episode.get("description") == "null" or episode.get("description") ==  "":
+            description = serial_json.description
+        # if episode.get("duration") == "null":
+        #     duration = "nullt"
 
         episodeBase = EpisodeBase(
             title=episode.get("title"),
-            description=episode.get("description"),
-            duration=episode.get("duration"),
+            description=description,
+            duration=duration,
             image_url=serial_json.image,
             # season_id=season.data.id,
             # serial_id=serial.data.id,
