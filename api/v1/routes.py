@@ -49,7 +49,8 @@ async def create(movie_json: Movie):
         is_persian=movie_json.persian,
         image_url=movie_json.image,
         cover_url=movie_json.cover,
-        api_id=movie_json.id
+        api_id=movie_json.id,
+        note=movie_json.note
     )
 
     with Session(engine) as session:
@@ -125,6 +126,7 @@ async def create(serial_json: Episode):
     season = episode.get("season")
     description = episode.get("description")
     duration = episode.get("duration")
+    note = serial_json.note
     with Session(engine) as session:
         # serial = SerialCRUD.get_by_api_id(session, serial_json.id)
         
@@ -156,7 +158,8 @@ async def create(serial_json: Episode):
             image_url=serial_json.image,
             # season_id=season.data.id,
             # serial_id=serial.data.id,
-            api_id=episode.get("id")
+            api_id=episode.get("id"),
+            note=note
         )
 
         EpisodeObj = EpisodeCRUD.get_by_api_id(session, episode.get('id'))
@@ -242,7 +245,8 @@ async def create(serial_json: Serial):
         image_url=serial_json.image,
         cover_url=serial_json.cover,
         api_id=serial_json.id,
-        season_count=serial_json.season_count
+        season_count=serial_json.season_count,
+        note=serial_json.note
     )
 
     with Session(engine) as session:

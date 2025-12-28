@@ -60,22 +60,27 @@ async def send_to_telegram(data: dict, bot, chat_id: int):
         "duration": "مدت زمان",
         "year": "سال",
         "imdb": "امتیاز IMDB",
-        "is_persian": "فارسی",
+        "is_persian": "دوبله فارسی ",
         "season_count": "تعداد فصل‌ها",
+
     }
 
     lines = []
 
     # Title
     title = data.get("title") or data.get("name") or "بدون عنوان"
-    lines.append(f"<b>📌 {title}</b>")
+    note = data.get("note")
+    RTL = "\u200F"
 
+    lines.append(f'<b>{RTL}📌 {title}</b>')
+    print(note)
     # If episode, include serial name
     if data.get("season_id") and "serial" in data:
         serial_name = data["serial"].get("title") or data["serial"].get("name")
         if serial_name:
             lines.append(f"• سریال: {serial_name}")
-
+    if  note != "":
+        lines.append(f"<b>{RTL}📝 {note}</b>")
     # Add fields
     for key, persian_label in FIELD_MAP.items():
         if key in data and data[key] is not None:

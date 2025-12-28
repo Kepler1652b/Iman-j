@@ -133,6 +133,7 @@ class MovieBase(SQLModel):
     cover_url: str = Field(max_length=500)
     sent: bool = Field(default=False)
     api_id : int = Field(unique=True)
+    note :str = Field(default="")
 
 class Movie(MovieBase, table=True):
     """Movie Table with trailers, genres, countries and actors list"""
@@ -190,7 +191,7 @@ class SerialBase(SQLModel):
     sent: bool = Field(default=False)
     api_id:int = Field(unique=True)
     season_count: int
-
+    note :str = Field(default="")
 
 class Serial(SerialBase, table=True):
     """Serial Table with trailers, genres, countries, actors and seasons"""
@@ -234,6 +235,7 @@ class EpisodeBase(SQLModel):
     sent: bool = Field(default=False)
     api_id : int = Field(unique=True)
     image_url: str = Field(max_length=500)
+    note :str = Field(default="")
 
 class Episode(EpisodeBase, table=True):
     """Serial Episode Table"""

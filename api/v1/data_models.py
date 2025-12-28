@@ -19,7 +19,7 @@ class Movie(BaseModel):
     genres: List[Dict[str,Any]] 
     countries: List[Dict[str,Any]] 
     actors: List[Dict[str,Any]]
-
+    note :str
 
 
 
@@ -41,6 +41,7 @@ class Episode(BaseModel):
     actors: List[Dict[str,Any]]
     season_count : int
     episode : Dict[str,Any]
+    note : str
 
 
 
@@ -61,4 +62,4 @@ class Serial(BaseModel):
     countries: List[Dict[str,Any]] 
     actors: List[Dict[str,Any]]
     season_count : int
-
+    note : str
