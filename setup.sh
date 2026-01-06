@@ -62,20 +62,24 @@ After=network.target
 
 [Service]
 Type=simple
-User=$USER
-WorkingDirectory=$PROJECT_DIR
-ExecStart=$UV_PATH run uvicorn api.app:app --host 127.0.0.1 --port $PORT
-Environment="PATH=$HOME/.local/bin:$HOME/.cargo/bin:/usr/local/bin:/usr/bin:/bin"
+User=root
+WorkingDirectory=/root/Iman-j
+Environment="PATH=/root/.local/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart=/root/.local/bin/uv run -- uvicorn api.app:app --host 0.0.0.0 --port 8090
+
+# Resource limits
+CPUQuota=30%
+MemoryMax=2G
 
 Restart=always
 RestartSec=10
-
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=fastapi-app
 
 [Install]
 WantedBy=multi-user.target
+
 EOF
 
 # Bot service
@@ -86,17 +90,18 @@ After=network.target
 
 [Service]
 Type=simple
-User=$USER
-WorkingDirectory=$PROJECT_DIR
-ExecStart=$UV_PATH run main.py
-Environment="PATH=$HOME/.local/bin:$HOME/.cargo/bin:/usr/local/bin:/usr/bin:/bin"
+User=root
+WorkingDirectory=/root/Iman-j
+ExecStart=/root/.local/bin/uv run -- python main.py
+
+# Resource limits
+CPUQuota=30%
+MemoryMax=2G
 
 Restart=always
 RestartSec=10
-
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=telegram-bot
 
 [Install]
 WantedBy=multi-user.target
