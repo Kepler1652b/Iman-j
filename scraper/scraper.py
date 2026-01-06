@@ -3,10 +3,10 @@ import feedparser
 from typing import Any, Protocol,Dict,List
 from httpx import Client
 from bs4 import BeautifulSoup
-from scraper.scraper_utilities import format_timestamp,write_post_list
+from scraper.scraper_utilities import format_timestamp,write_post_list,PersianTextNormalizer
 from telegram.ext import  ContextTypes
 
-
+text_normalizer = PersianTextNormalizer()
 
 
 class Scraper(Protocol):
@@ -293,35 +293,32 @@ class FromCinemaScraper:
             return None
     
 
-    def detail_parser(self,data):
+    def detail_parser(self, data):
         if data:
-            content = ''
             data_list = []
             for post in data:
-                link = post.get("link",None)
+                link = post.get("link", None)
 
                 if link:
                     try:
                         response = self.__session.get(link)
-
-                        soup = BeautifulSoup(response.text,'html.parser')
+                        soup = BeautifulSoup(response.text, 'html.parser')
                         text_list = soup.find_all("p")
-                        if text_list:
-                            for p in text_list:
-                                content += p.text
-
-                        post["content"] = content
+                        
+                        # FIX: Use get_text with separator
+                        content = ' '.join([p.get_text(separator=' ', strip=True) for p in text_list]) if text_list else 'N/A'
+                        
+                        # Normalize content
+                        post["content"] = text_normalizer.normalize(content)
                         data_list.append(post)
-                        content = ''
+                        
                     except Exception as e:
-                        print(f'logger  [class name] [time] [news title] : Http error {e}')
+                        print(f'logger [FromCinemaScraper] : Http error {e}')
                 else:
-                    print("logger  [class name] [time] [news title] : No link available")
+                    print("logger [FromCinemaScraper] : No link available")
             return data_list
-                
         else:
             return None
-
 
 class CaffeCinemaScraper:
 
