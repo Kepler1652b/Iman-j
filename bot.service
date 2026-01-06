@@ -7,6 +7,11 @@ Type=simple
 User=root
 WorkingDirectory=/root/Iman-j
 ExecStart=/root/.local/bin/uv run -- python main.py
+
+# Resource limits
+CPUQuota=30%
+MemoryMax=1.5G
+
 Restart=always
 RestartSec=10
 StandardOutput=journal
